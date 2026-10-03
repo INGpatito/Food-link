@@ -20,7 +20,7 @@ jobs:
 
       - name: Instalar dependencias
         working-directory: ./footlink
-        run: rm -rf package-lock.json node_modules && npm install
+        run: rm -rf package-lock.json node_modules && npm install --force
 
       - name: Construir la aplicacion
         working-directory: ./footlink
