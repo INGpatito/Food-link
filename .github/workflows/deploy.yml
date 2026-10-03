@@ -1,32 +1,30 @@
+name: Despliegue Automatico Footlink
 
-    name: Despliegue Automatico Footlink
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-    on:
-      push:
-        branches:
-          - main
-      workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout del codigo
+        uses: actions/checkout@v4
 
-    jobs:
-      deploy:
-        runs-on: self-hosted
-        steps:
-          - name: Checkout del codigo
-            uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
 
-          - name: Configurar Node.js
-            uses: actions/setup-node@v4
-            with:
-              node-version: 18
+      - name: Instalar dependencias
+        working-directory: ./footlink
+        run: rm -rf package-lock.json node_modules && npm install
 
-          - name: Instalar dependencias
-            working-directory: ./footlink
-            run: rm -f package-lock.json && npm install
+      - name: Construir la aplicacion
+        working-directory: ./footlink
+        run: npm run build
 
-          - name: Construir la aplicacion
-            working-directory: ./footlink
-            run: npm run build
-
-          - name: Desplegar a Nginx
-            run: rsync -av --delete ./footlink/dist/ /home/orangepi/Food-link/footlink/dist/
-
+      - name: Desplegar a Nginx
+        run: rsync -av --delete ./footlink/dist/ /home/orangepi/Food-link/footlink/dist/
