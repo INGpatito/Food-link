@@ -1,0 +1,13 @@
+# Dependencias
+node_modules/
+
+# Compilacion y temporales
+dist/
+*.log
+
+# Variables de entorno y secretos
+.env
+.env.local
+
+# Notas personales
+Food/

@@ -1,0 +1,268 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-1: #FBE5C8;
+  --color-brand-2: #F2A65A;
+  --color-brand-3: #E86A33;
+  --color-brand-4: #C7452A;
+  --color-brand-5: #5B8A2B;
+  
+  --color-color1: #FBE5C8;
+  --color-color2: #F2A65A;
+  --color-color3: #E86A33;
+  --color-color4: #C7452A;
+  --color-color5: #5B8A2B;
+  
+  --color-charcoal: #181512;
+  --color-violet: #6B4EFF;
+  --color-plum: #26192F;
+
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Space Grotesk', sans-serif;
+}
+
+:root {
+  --c1: #FBE5C8;
+  --c2: #F2A65A;
+  --c3: #E86A33;
+  --c4: #C7452A;
+  --c5: #5B8A2B;
+  --charcoal: #181512;
+  --violet: #6B4EFF;
+  --plum: #26192F;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: var(--charcoal);
+  color: var(--c1);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+  width: 100%;
+  min-height: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  position: relative;
+  isolation: isolate;
+  --ambient-model: rgba(235, 110, 35, 0.65);
+  --ambient-primary: rgba(245, 175, 75, 0.55);
+  --ambient-secondary: rgba(215, 65, 35, 0.35);
+  --model-glow-x: 72%;
+  --model-glow-y: 50%;
+  --ambient-primary-pos: 20% 30%;
+  --ambient-secondary-pos: 50% 85%;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10%;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 1;
+  filter: blur(46px);
+  transform: scale(1.02);
+  background:
+    radial-gradient(circle 620px at var(--model-glow-x, 72%) var(--model-glow-y, 50%), var(--ambient-model) 0%, transparent 70%),
+    radial-gradient(ellipse 950px 750px at var(--ambient-primary-pos, 20% 30%), var(--ambient-primary) 0%, transparent 72%),
+    radial-gradient(ellipse 850px 650px at var(--ambient-secondary-pos, 50% 85%), var(--ambient-secondary) 0%, transparent 68%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.04) 0%, transparent 55%, rgba(0, 0, 0, 0.18) 100%);
+  will-change: opacity, transform, background;
+}
+
+.site-nav {
+  color: var(--charcoal);
+  background: rgba(255, 250, 240, 0.72);
+  border-color: rgba(24, 21, 18, 0.1);
+  box-shadow: 0 12px 36px rgba(24, 21, 18, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  transition: color 0.45s ease, background-color 0.45s ease, border-color 0.45s ease;
+}
+
+/* Dark sections: pizza, cake, cupcake, footer → light navbar text */
+body[data-section="features"] .site-nav,
+body[data-section="menu"] .site-nav,
+body[data-section="extra"] .site-nav,
+body[data-section="footer"] .site-nav {
+  color: var(--c1);
+  background: rgba(24, 21, 18, 0.42);
+  border-color: rgba(251, 229, 200, 0.16);
+}
+
+/* Light sections: hero, salad → dark navbar text (default) */
+body[data-section="salad"] .site-nav {
+  color: var(--charcoal);
+  background: rgba(240, 247, 232, 0.72);
+  border-color: rgba(91, 138, 43, 0.15);
+}
+
+.site-mobile-nav {
+  color: var(--c1);
+  background: rgba(24, 21, 18, 0.96);
+  border-color: rgba(251, 229, 200, 0.14);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+body[data-section="hero"] .site-mobile-nav {
+  color: var(--charcoal);
+  background: rgba(255, 250, 240, 0.97);
+  border-color: rgba(24, 21, 18, 0.1);
+}
+
+body[data-section="salad"] .site-mobile-nav {
+  color: var(--charcoal);
+  background: rgba(240, 247, 232, 0.97);
+  border-color: rgba(91, 138, 43, 0.12);
+}
+
+.nav-link {
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-link:hover {
+  color: var(--c3);
+}
+
+body[data-section="features"] .nav-link:hover,
+body[data-section="menu"] .nav-link:hover,
+body[data-section="extra"] .nav-link:hover,
+body[data-section="footer"] .nav-link:hover {
+  color: var(--c2);
+}
+
+body[data-section="salad"] .nav-link:hover {
+  color: var(--c5);
+}
+
+/* Custom modern scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--charcoal);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--c3);
+}
+
+/* Three.js canvas container */
+#webgl-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Minimal UI helpers */
+.minimal-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease, color 0.25s ease;
+  border-width: 1px;
+  border-style: solid;
+}
+.minimal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(199, 69, 42, 0.24);
+}
+.minimal-btn:active { transform: translateY(0) scale(0.98); }
+
+.minimal-btn-outline {
+  padding: 0.75rem 1.5rem;
+  border-radius: 999px;
+  font-weight: 600;
+  border-width: 1px;
+  border-style: solid;
+  transition: all 0.3s ease;
+}
+.minimal-btn-outline:hover {
+  transform: translateY(-2px);
+}
+
+.minimal-btn:focus-visible,
+.minimal-btn-outline:focus-visible,
+.nav-link:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--c2);
+  outline-offset: 4px;
+}
+
+.editorial-block {
+  border-radius: 0px;
+  border-left-width: 4px;
+  border-left-style: solid;
+  padding-left: 1.5rem;
+}
+
+.solid-card {
+  background: var(--c1);
+  color: var(--charcoal);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.text-stroke {
+  -webkit-text-stroke: 1px currentColor;
+  -webkit-text-fill-color: transparent;
+}
+
+.menu-product-stage {
+  isolation: isolate;
+}
+
+.product-orbit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(78%, 470px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(251, 229, 200, 0.17);
+  border-radius: 50%;
+  opacity: 0.75;
+  transform: translate(-50%, -50%) rotate(-13deg);
+}
+
+.product-orbit::before,
+.product-orbit::after {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  border: 1px solid rgba(251, 229, 200, 0.12);
+  border-radius: 50%;
+}
+
+.product-orbit::after {
+  inset: 21%;
+  border-style: dashed;
+  transform: rotate(34deg) scaleY(0.72);
+}
+
+/* Modal styling */
+.modal-overlay {
+  background: radial-gradient(circle at center, rgba(35, 22, 16, 0.78) 0%, rgba(14, 12, 10, 0.9) 100%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

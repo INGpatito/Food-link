@@ -19,12 +19,15 @@ jobs:
           node-version: 18
 
       - name: Instalar dependencias
-        working-directory: ./footlink
-        run: rm -rf package-lock.json node_modules && npm install --force
+        run: npm install --force
 
       - name: Construir la aplicacion
-        working-directory: ./footlink
         run: npm run build
 
       - name: Desplegar a Nginx
-        run: rsync -av --delete ./footlink/dist/ /home/orangepi/Food-link/footlink/dist/
+        run: rsync -av --delete ./dist/ /home/orangepi/Food-link/footlink/dist/
+
+      - name: Desplegar servidor API
+        run: |
+          rsync -av ./server/ /home/orangepi/Food-link/footlink/server/
+          pm2 restart foodlink-api || true
