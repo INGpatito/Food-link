@@ -11,3 +11,9 @@ dist/
 
 # Notas personales
 Food/
+
+# IDE y editores
+.idea/
+*.iml
+Foodlink/.idea/
+Foodlink/*.iml

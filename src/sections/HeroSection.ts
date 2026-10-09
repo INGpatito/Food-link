@@ -3,6 +3,7 @@ export function initHeroSection(container: HTMLElement | null) {
 
   container.innerHTML = `
     <div class="container mx-auto w-full h-full px-5 sm:px-8 flex items-center justify-start pointer-events-none">
+      <span class="product-orbit product-orbit--hero" aria-hidden="true"></span>
       <div class="w-full md:w-1/2 flex flex-col gap-5 md:gap-8 z-10 pointer-events-auto">
         <div class="mb-[-1rem] flex items-center gap-3 text-xs font-bold uppercase tracking-[0.22em] text-brand-4">
           <span class="h-2 w-2 rounded-full bg-brand-4 shadow-[0_0_14px_rgba(199,69,42,0.55)]"></span>
@@ -30,7 +31,7 @@ export function initHeroSection(container: HTMLElement | null) {
         </div>
       </div>
 
-      <!-- Floating floating data clusters -->
+      <!-- Floating data clusters -->
       <div class="absolute right-10 bottom-20 flex flex-col gap-2 pointer-events-auto text-charcoal font-body text-sm font-bold tracking-wider hidden md:flex">
         <div class="editorial-block border-brand-4">
           <span class="block text-brand-4 mb-1 uppercase text-xs">The Classic</span>
@@ -40,7 +41,7 @@ export function initHeroSection(container: HTMLElement | null) {
       <div class="absolute right-32 top-32 flex flex-col gap-2 pointer-events-auto text-charcoal font-body text-sm font-bold tracking-wider hidden md:flex">
          <div class="editorial-block border-brand-2">
           <span class="block text-brand-3 mb-1 uppercase text-xs">Cocción</span>
-          <span class="text-xl">Carbón & Leña</span>
+          <span class="text-xl">Carbón &amp; Leña</span>
         </div>
       </div>
     </div>

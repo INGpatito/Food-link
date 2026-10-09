@@ -39,9 +39,9 @@ export const MODEL_CONFIGS = {
     rotation: { x: 0.25, y: -0.4, z: 0 }
   },
   extra: {
-    scale: 0.60,
-    position: { x: -1.3, y: -0.18, z: 0 },
-    rotation: { x: 0.2, y: 0.3, z: 0 }
+    scale: 0.85,
+    position: { x: -2.0, y: -0.15, z: 0 },
+    rotation: { x: 0.35, y: 0.45, z: 0 }
   },
 };
 
@@ -60,9 +60,9 @@ export const SECTION_THEMES = {
   hero: {
     backgroundColor: '#F8EDE0',
     color: '#181512',
-    '--ambient-model': 'rgba(235, 110, 35, 0.65)',
-    '--ambient-primary': 'rgba(245, 175, 75, 0.55)',
-    '--ambient-secondary': 'rgba(215, 65, 35, 0.35)',
+    '--ambient-model': 'rgba(235, 110, 35, 0.40)',
+    '--ambient-primary': 'rgba(245, 175, 75, 0.25)',
+    '--ambient-secondary': 'rgba(215, 65, 35, 0.15)',
     '--model-glow-x': '72%',
     '--model-glow-y': '48%',
     '--ambient-primary-pos': '20% 30%',
@@ -71,9 +71,9 @@ export const SECTION_THEMES = {
   features: {
     backgroundColor: '#12100E',
     color: '#FBE5C8',
-    '--ambient-model': 'rgba(225, 45, 20, 0.65)',
-    '--ambient-primary': 'rgba(245, 135, 35, 0.50)',
-    '--ambient-secondary': 'rgba(180, 30, 20, 0.40)',
+    '--ambient-model': 'rgba(225, 45, 20, 0.40)',
+    '--ambient-primary': 'rgba(245, 135, 35, 0.25)',
+    '--ambient-secondary': 'rgba(180, 30, 20, 0.20)',
     '--model-glow-x': '28%',
     '--model-glow-y': '50%',
     '--ambient-primary-pos': '80% 30%',
@@ -82,9 +82,9 @@ export const SECTION_THEMES = {
   salad: {
     backgroundColor: '#EAF5E3',
     color: '#181512',
-    '--ambient-model': 'rgba(68, 170, 45, 0.60)',
-    '--ambient-primary': 'rgba(165, 220, 75, 0.55)',
-    '--ambient-secondary': 'rgba(245, 205, 70, 0.45)',
+    '--ambient-model': 'rgba(68, 170, 45, 0.35)',
+    '--ambient-primary': 'rgba(165, 220, 75, 0.25)',
+    '--ambient-secondary': 'rgba(245, 205, 70, 0.20)',
     '--model-glow-x': '72%',
     '--model-glow-y': '50%',
     '--ambient-primary-pos': '20% 30%',
@@ -93,20 +93,20 @@ export const SECTION_THEMES = {
   menu: {
     backgroundColor: '#1D0F28',
     color: '#ffffff',
-    '--ambient-model': 'rgba(195, 35, 165, 0.70)',
-    '--ambient-primary': 'rgba(115, 65, 255, 0.60)',
-    '--ambient-secondary': 'rgba(240, 80, 160, 0.38)',
+    '--ambient-model': 'rgba(195, 35, 165, 0.40)',
+    '--ambient-primary': 'rgba(115, 65, 255, 0.30)',
+    '--ambient-secondary': 'rgba(240, 80, 160, 0.20)',
     '--model-glow-x': '72%',
     '--model-glow-y': '50%',
     '--ambient-primary-pos': '20% 30%',
     '--ambient-secondary-pos': '50% 85%'
   },
   extra: {
-    backgroundColor: '#140B07',
+    backgroundColor: '#22110C',
     color: '#FBE5C8',
-    '--ambient-model': 'rgba(225, 105, 25, 0.65)',
-    '--ambient-primary': 'rgba(180, 60, 20, 0.50)',
-    '--ambient-secondary': 'rgba(245, 175, 80, 0.35)',
+    '--ambient-model': 'rgba(225, 105, 25, 0.40)',
+    '--ambient-primary': 'rgba(180, 60, 20, 0.25)',
+    '--ambient-secondary': 'rgba(245, 175, 80, 0.18)',
     '--model-glow-x': '28%',
     '--model-glow-y': '50%',
     '--ambient-primary-pos': '80% 30%',
@@ -115,9 +115,9 @@ export const SECTION_THEMES = {
   footer: {
     backgroundColor: '#12100E',
     color: '#FBE5C8',
-    '--ambient-model': 'rgba(232, 106, 51, 0.40)',
-    '--ambient-primary': 'rgba(242, 166, 90, 0.28)',
-    '--ambient-secondary': 'rgba(199, 69, 42, 0.22)',
+    '--ambient-model': 'rgba(232, 106, 51, 0.20)',
+    '--ambient-primary': 'rgba(242, 166, 90, 0.15)',
+    '--ambient-secondary': 'rgba(199, 69, 42, 0.10)',
     '--model-glow-x': '50%',
     '--model-glow-y': '60%',
     '--ambient-primary-pos': '50% 30%',

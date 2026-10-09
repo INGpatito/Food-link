@@ -50,7 +50,7 @@ export class CameraController {
     // Adjust camera Z on mobile devices so models fit nicely
     if (width < 768) {
       this.camera.position.z = 9.5;
-      this.currentPosition.z = 9.5;
+      this.currentPosition.z = 9.5; //dudo de mi existencia 
     } else {
       this.camera.position.z = 7.5;
       this.currentPosition.z = 7.5;

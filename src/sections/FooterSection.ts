@@ -3,6 +3,7 @@ export function initFooterSection(container: HTMLElement | null) {
 
   container.innerHTML = `
     <div class="container mx-auto flex min-h-[72vh] w-full flex-col items-center justify-center px-8 py-20 text-brand-1">
+      <span class="product-orbit product-orbit--footer" aria-hidden="true"></span>
       <p class="mb-5 text-xs font-bold uppercase tracking-[0.28em] text-brand-2">Un buen cierre</p>
       <h2 class="mb-8 text-center font-display text-3xl font-bold uppercase md:text-5xl">
         ¿Listo para probar?

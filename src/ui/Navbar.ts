@@ -4,18 +4,18 @@ export function initNavbar(container: HTMLElement | null) {
   if (!container) return;
 
   container.innerHTML = `
-    <nav class="fixed top-0 left-0 z-50 w-full px-4 pt-4">
+    <nav class="site-nav-shell fixed top-0 left-0 z-50 w-full px-4 pt-4" aria-label="Navegación principal">
       <div class="site-nav container mx-auto flex items-center justify-between gap-4 rounded-full border px-5 py-3 md:px-7">
         <a href="#hero-root" class="font-display font-extrabold text-xl tracking-tight uppercase md:text-2xl" aria-label="Foodlink, ir al inicio">
           Foodlink<span class="text-brand-3">.</span>
         </a>
       
         <div class="hidden md:flex items-center gap-8 font-body font-medium text-sm tracking-wide">
-          <a href="#hero-root" class="nav-link">Inicio</a>
-          <a href="#features-root" class="nav-link">Origen</a>
-          <a href="#salad-root" class="nav-link">Ensalada</a>
-          <a href="#menu-root" class="nav-link">Especiales</a>
-          <a href="#extra-root" class="nav-link">Extra</a>
+          <a href="#hero-root" class="nav-link" data-nav-section="hero" aria-current="page">Inicio</a>
+          <a href="#features-root" class="nav-link" data-nav-section="features">Origen</a>
+          <a href="#salad-root" class="nav-link" data-nav-section="salad">Ensalada</a>
+          <a href="#menu-root" class="nav-link" data-nav-section="menu">Especiales</a>
+          <a href="#extra-root" class="nav-link" data-nav-section="extra">Extra</a>
         </div>
 
         <div class="flex items-center gap-4">
@@ -66,6 +66,18 @@ export function initNavbar(container: HTMLElement | null) {
 
   updateAuthUI();
   onAuthChange(() => updateAuthUI());
+
+  document.addEventListener('foodlink:sectionchange', ((event: CustomEvent<{ section: string }>) => {
+    const activeSection = event.detail.section;
+    container.querySelectorAll<HTMLAnchorElement>('[data-nav-section]').forEach((link) => {
+      const isActive = link.dataset.navSection === activeSection;
+      if (isActive) {
+        link.setAttribute('aria-current', 'page');
+      } else {
+        link.removeAttribute('aria-current');
+      }
+    });
+  }) as EventListener);
 
   if (menuButton && mobileNavigation) {
     const closeMenu = () => {

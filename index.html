@@ -9,18 +9,18 @@
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="/src/styles/global.css" /> <!-- Tailwind CSS -->
 </head>
 <body class="antialiased selection:bg-brand-4 selection:text-white" data-section="hero">
-  
+  <div id="noise-overlay"></div>
+  <!-- Kept outside #app so its fixed positioning is never captured by the
+       perspective used for the DNA transition below. -->
+  <div id="navbar-root"></div>
+
   <!-- UI Container -->
   <main class="relative z-20 w-full overflow-hidden" id="app">
-    
-    <!-- Navbar will be injected here -->
-    <div id="navbar-root"></div>
-
     <!-- Hero Section (Burger) -->
     <section id="hero-root" class="relative w-full min-h-screen flex items-center"></section>
     

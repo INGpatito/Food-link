@@ -9,7 +9,7 @@ import { initExtraSection } from './sections/ExtraSection';
 import { initFooterSection } from './sections/FooterSection';
 import { initLoginModal } from './ui/LoginModal';
 
-document.addEventListener('DOMContentLoaded', async () => {
+const startApp = async () => {
   try {
     // 1. Initialize UI Elements First
     initNavbar(document.getElementById('navbar-root'));
@@ -38,4 +38,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (error) {
     console.error('Failed to initialize application:', error);
   }
-});
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp);
+} else {
+  startApp();
+}
+
