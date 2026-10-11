@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { LightingSetup } from './LightingSetup';
 import { ModelLoader } from './ModelLoader';
-import { MODEL_PATHS, MODEL_CONFIGS } from '../utils/constants';
+import { MODEL_PATHS, MODEL_CONFIGS, SECTION_THEMES } from '../utils/constants';
 import { MaterialEnhancer } from './shaders/MaterialEnhancerShader';
 import { VolumetricRaysShader } from './shaders/VolumetricRaysShader';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
@@ -37,6 +37,9 @@ export class SceneManager {
   private mouseNormalized = new THREE.Vector2(0, 0);
   private targetMouseNormalized = new THREE.Vector2(0, 0);
   private isRTX: boolean = false;
+  
+  private rtxCursorGroup: THREE.Group | null = null;
+  private cursorLight: THREE.PointLight | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.scene = new THREE.Scene();
@@ -53,17 +56,37 @@ export class SceneManager {
       powerPreference: 'high-performance'
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // CRÍTICO: Limitar PixelRatio a 1.25 máximo si estamos usando Post-Procesado pesado. 
+    // Hacer GTAO/Bloom en pantallas retina o 4K (PixelRatio 2) asfixia incluso a las mejores gráficas.
+    this.renderer.setPixelRatio(this.isRTX ? Math.min(window.devicePixelRatio, 1.25) : Math.min(window.devicePixelRatio, 2));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     
-    // RTX Shadow Upgrades
+    // Sombras estándar de alto rendimiento
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = this.isRTX ? THREE.VSMShadowMap : THREE.PCFShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
     this.modelGroup = new THREE.Group();
     this.scene.add(this.modelGroup);
+
+    if (this.isRTX) {
+      document.body.classList.add('rtx-enabled');
+      document.documentElement.style.setProperty('--rt-light-color', 'rgb(245, 166, 65)');
+      this.rtxCursorGroup = new THREE.Group();
+      
+      // Luz física atada al cursor (Efecto sutil, elegante y fotorealista)
+      // Parámetros: Color, Intensidad baja (0.8), Distancia corta (5.0), Decaimiento físico realista (2.0)
+      this.cursorLight = new THREE.PointLight(0xffffff, 0.8, 5.0, 2.0);
+      this.cursorLight.castShadow = true;
+      this.cursorLight.shadow.mapSize.width = 1024; // Alta resolución para sombras limpias
+      this.cursorLight.shadow.mapSize.height = 1024;
+      this.cursorLight.shadow.bias = -0.001;
+      this.cursorLight.shadow.radius = 12; // Penumbra extremadamente suave
+      
+      this.rtxCursorGroup.add(this.cursorLight);
+      this.scene.add(this.rtxCursorGroup);
+    }
 
     this.raysShader = new VolumetricRaysShader();
     this.scene.add(this.raysShader.mesh);
@@ -144,6 +167,30 @@ export class SceneManager {
     this.activeModelSection = section;
     this.lighting.updateForSection(section);
     this.raysShader.setSection(section);
+
+    // Actualizar dinámicamente el color de la luz del cursor (Web RTX)
+    if (this.cursorLight) {
+      const theme = SECTION_THEMES[section as keyof typeof SECTION_THEMES];
+      let targetColor = '#ffffff'; // Default
+      
+      if (theme && theme['--ambient-primary']) {
+        const rgbaMatch = theme['--ambient-primary'].match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+        if (rgbaMatch) {
+          targetColor = `rgb(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]})`;
+        }
+      }
+
+      document.documentElement.style.setProperty('--rt-light-color', targetColor);
+
+      gsap.to(this.cursorLight.color, {
+        r: new THREE.Color(targetColor).r,
+        g: new THREE.Color(targetColor).g,
+        b: new THREE.Color(targetColor).b,
+        duration: 1.5,
+        ease: 'power2.inOut',
+        overwrite: 'auto'
+      });
+    }
   }
 
   // ── ADN Spiral Math ──
@@ -177,9 +224,12 @@ export class SceneManager {
 
         const config = MODEL_CONFIGS[section];
         const baseRot = config.rotation;
-        
+
+        // En dispositivos móviles (compactLayout), bajamos los modelos 3D a la mitad 
+        // inferior de la pantalla (valores Y negativos) para que el texto esté arriba.
+        // La pantalla va de +2.07 (top) a -2.07 (bottom). El centro del hueco inferior es ~ -1.0.
         const mobileYMap: Record<string, number> = {
-          hero: -1.42, features: -1.86, salad: -1.42, menu: -1.42, extra: -1.86,
+          hero: -0.85, features: -1.05, salad: -0.95, menu: -0.95, extra: -1.0,
         };
         const basePositionY = compactLayout ? (mobileYMap[section] ?? config.position.y) : config.position.y;
         const basePositionX = compactLayout ? 0 : config.position.x;
@@ -239,6 +289,22 @@ export class SceneManager {
     this.materialEnhancer.update(elapsedTime);
     this.lighting.update(elapsedTime);
     this.mouseNormalized.lerp(this.targetMouseNormalized, 0.05);
+
+    // Mover el Cursor 3D si estamos en modo RTX
+    if (this.rtxCursorGroup) {
+      const vector = new THREE.Vector3(this.mouseNormalized.x, this.mouseNormalized.y, 0.5);
+      vector.unproject(this.camera);
+      const dir = vector.sub(this.camera.position).normalize();
+      const distance = (1.5 - this.camera.position.z) / dir.z; // Plano Z=1.5 (Frente a los modelos)
+      const targetPos = this.camera.position.clone().add(dir.multiplyScalar(distance));
+      this.rtxCursorGroup.position.lerp(targetPos, 0.12); // Movimiento cinematográfico con "peso"
+
+      // Proyectar física de luz RT a la tipografía del DOM (0 a 1)
+      const normX = this.mouseNormalized.x * 0.5 + 0.5;
+      const normY = -this.mouseNormalized.y * 0.5 + 0.5;
+      document.documentElement.style.setProperty('--rt-light-x', normX.toFixed(3));
+      document.documentElement.style.setProperty('--rt-light-y', normY.toFixed(3));
+    }
 
     // Ejecutar el scrub continuo de los modelos 3D
     this.updateModelsScrub(elapsedTime);

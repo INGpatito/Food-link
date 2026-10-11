@@ -67,12 +67,11 @@ export class VolumetricRaysShader {
           // Ray frequency
           float rayUvX = rotatedUv.x * 6.0;
           
-          // Layered noise to create shimmering shafts of light
+          // Layered noise to create shimmering shafts of light (Optimized for performance)
           float noise1 = snoise(vec2(rayUvX, uTime * 0.08));
           float noise2 = snoise(vec2(rayUvX * 2.0, uTime * 0.15)) * 0.5;
-          float noise3 = snoise(vec2(rayUvX * 4.0, uTime * 0.04)) * 0.25;
           
-          float totalNoise = (noise1 + noise2 + noise3) / 1.75;
+          float totalNoise = (noise1 + noise2) / 1.5;
           
           // Remap noise to 0..1 and sharpen it
           float rayStrength = totalNoise * 0.5 + 0.5;

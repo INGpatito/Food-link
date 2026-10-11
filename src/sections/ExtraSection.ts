@@ -2,8 +2,8 @@ export function initExtraSection(container: HTMLElement | null) {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="container mx-auto px-6 md:px-8 w-full min-h-[90vh] grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center py-20">
-      <div class="menu-product-stage order-1 lg:order-1 relative flex min-h-[260px] items-end justify-start pointer-events-none lg:min-h-[520px]">
+    <div class="container mx-auto px-6 md:px-8 w-full min-h-[100dvh] flex flex-col lg:flex-row gap-10 lg:gap-16 items-start lg:items-center justify-start pointer-events-none pb-12 lg:pb-0 pt-28 lg:pt-0">
+      <div class="menu-product-stage hidden lg:flex relative min-h-[520px] w-full lg:w-1/2 items-end justify-start pointer-events-none">
         <span class="product-orbit" aria-hidden="true"></span>
         <span class="absolute inset-0 flex flex-col items-center justify-center text-center font-display font-black text-[clamp(3.5rem,11vw,8.5rem)] leading-[0.82] tracking-tight text-brand-1/[0.08] select-none" aria-hidden="true">
           <span>CUP</span>
@@ -11,14 +11,14 @@ export function initExtraSection(container: HTMLElement | null) {
         </span>
       </div>
 
-      <div class="order-2 lg:order-2 flex flex-col gap-6 z-20 pointer-events-auto text-brand-1">
+      <div class="w-full lg:w-1/2 flex flex-col gap-6 z-20 pointer-events-auto text-brand-1 mb-auto lg:mb-0">
         <div class="self-start rounded-full border border-brand-3/30 bg-brand-3/10 px-4 py-2 text-sm font-bold uppercase tracking-[0.18em] text-brand-3">
           Postre Especial
         </div>
 
         <h2 class="font-display font-bold text-5xl md:text-7xl leading-none uppercase">
           Extra<br>
-          <span class="text-transparent text-stroke" style="-webkit-text-stroke-color: #FBE5C8;">Chocolate</span>
+          <span class="text-brand-1 font-light italic lowercase text-stroke">chocolate</span>
         </h2>
 
         <p class="font-body text-brand-1/80 text-lg leading-relaxed max-w-md">

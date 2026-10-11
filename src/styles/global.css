@@ -62,7 +62,7 @@ body {
   mix-blend-mode: overlay;
 }
 
-body[data-section="hero"] { color: var(--charcoal); }
+body[data-section="hero"] { color: var(--c1); }
 body[data-section="features"] { color: var(--c1); }
 body[data-section="salad"] { color: var(--charcoal); }
 body[data-section="menu"] { color: #ffffff; }
@@ -75,9 +75,16 @@ body::before {
   inset: -10%;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.4;
-  background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.25) 100%);
-  will-change: opacity, background;
+  opacity: 0.92;
+  filter: blur(48px);
+  transform: scale(1.02);
+  background:
+    radial-gradient(circle 650px at var(--model-glow-x, 72%) var(--model-glow-y, 50%), var(--ambient-model) 0%, transparent 70%),
+    radial-gradient(ellipse 950px 750px at var(--ambient-primary-pos, 22% 32%), var(--ambient-primary) 0%, transparent 72%),
+    radial-gradient(ellipse 850px 650px at var(--ambient-secondary-pos, 60% 80%), var(--ambient-secondary) 0%, transparent 68%),
+    radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.35) 100%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, transparent 55%, rgba(0, 0, 0, 0.22) 100%);
+  will-change: opacity, transform, background;
 }
 
 .site-nav {
@@ -97,17 +104,18 @@ body::before {
   will-change: transform;
 }
 
-/* Dark sections: pizza, cake, cupcake, footer → light navbar text */
+/* Atmospheric sections: burger (brioche glow), pizza, cake, cupcake, footer → light navbar */
+body[data-section="hero"] .site-nav,
 body[data-section="features"] .site-nav,
 body[data-section="menu"] .site-nav,
 body[data-section="extra"] .site-nav,
 body[data-section="footer"] .site-nav {
   color: var(--c1);
-  background: rgba(24, 21, 18, 0.42);
-  border-bottom-color: rgba(251, 229, 200, 0.1);
+  background: rgba(24, 18, 14, 0.52);
+  border-bottom-color: rgba(245, 166, 65, 0.15);
 }
 
-/* Light sections: hero, salad → dark navbar text (default) */
+/* Light sections: salad → dark navbar text */
 body[data-section="salad"] .site-nav {
   color: var(--charcoal);
   background: rgba(240, 247, 232, 0.72);
@@ -116,16 +124,10 @@ body[data-section="salad"] .site-nav {
 
 .site-mobile-nav {
   color: var(--c1);
-  background: rgba(24, 21, 18, 0.96);
-  border-top: 1px solid rgba(251, 229, 200, 0.1);
+  background: rgba(24, 18, 14, 0.96);
+  border-top: 1px solid rgba(245, 166, 65, 0.15);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-}
-
-body[data-section="hero"] .site-mobile-nav {
-  color: var(--charcoal);
-  background: rgba(255, 250, 240, 0.97);
-  border-top-color: rgba(24, 21, 18, 0.1);
 }
 
 body[data-section="salad"] .site-mobile-nav {
@@ -226,9 +228,9 @@ a:focus-visible {
 }
 
 .text-stroke {
-  -webkit-text-stroke: 1px currentColor;
+  -webkit-text-stroke: 1.5px currentColor;
   -webkit-text-fill-color: transparent;
-  opacity: 0.15;
+  opacity: 1;
 }
 
 .menu-product-stage { isolation: isolate; }
@@ -244,6 +246,42 @@ a:focus-visible {
   background: radial-gradient(circle at center, rgba(35, 22, 16, 0.78) 0%, rgba(14, 12, 10, 0.9) 100%);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+}
+
+/* ────────────────────────────────────────────────────────
+   RAY TRACED TYPOGRAPHY (Solo activo con GPU RTX / modo RT)
+   Las letras interactúan físicamente con la luz 3D del ratón
+   ──────────────────────────────────────────────────────── */
+body.rtx-enabled h1,
+body.rtx-enabled h2,
+body.rtx-enabled h3 {
+  /* Vector de proyección en dirección opuesta a la fuente de luz */
+  --rt-dx: calc((0.5 - var(--rt-light-x, 0.5)) * 32px);
+  --rt-dy: calc((0.5 - var(--rt-light-y, 0.5)) * 32px);
+  --rt-spec-x: calc((var(--rt-light-x, 0.5) - 0.5) * 12px);
+  --rt-spec-y: calc((var(--rt-light-y, 0.5) - 0.5) * 12px);
+
+  text-shadow:
+    /* Sombra de contacto oclusión ambiental (GTAO) */
+    calc(var(--rt-dx) * 0.22) calc(var(--rt-dy) * 0.22) 3px rgba(0, 0, 0, 0.85),
+    /* Sombra arrojada difusa (Ray Tracing Penumbra) */
+    var(--rt-dx) var(--rt-dy) 24px rgba(0, 0, 0, 0.75),
+    /* Resplandor especular que mira hacia la fuente de luz física */
+    var(--rt-spec-x) var(--rt-spec-y) 18px var(--rt-light-color, rgba(245, 166, 65, 0.5));
+  
+  transition: text-shadow 0.06s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: text-shadow;
+}
+
+/* En textos con trazo (stroke) como 'QUE ENTRA', el reflejo especular es reactivo */
+body.rtx-enabled .text-stroke,
+body.rtx-enabled [style*="text-stroke"] {
+  --rt-spec-x: calc((var(--rt-light-x, 0.5) - 0.5) * 16px);
+  --rt-spec-y: calc((var(--rt-light-y, 0.5) - 0.5) * 16px);
+
+  filter: drop-shadow(var(--rt-spec-x) var(--rt-spec-y) 14px var(--rt-light-color, rgba(245, 166, 65, 0.75)));
+  transition: filter 0.06s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: filter;
 }
 
 @media (prefers-reduced-motion: reduce) {

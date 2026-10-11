@@ -2,15 +2,15 @@ export function initMenuSection(container: HTMLElement | null) {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="container mx-auto px-6 md:px-8 w-full min-h-[90vh] grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center py-20">
-      <div class="order-2 lg:order-1 flex flex-col gap-6 z-20 pointer-events-auto text-white">
+    <div class="container mx-auto px-6 md:px-8 w-full min-h-[100dvh] flex flex-col lg:flex-row gap-10 lg:gap-16 items-start lg:items-center justify-start pointer-events-none pb-12 lg:pb-0 pt-28 lg:pt-0">
+      <div class="w-full lg:w-1/2 flex flex-col gap-6 z-20 pointer-events-auto text-white mb-auto lg:mb-0">
         <div class="self-start rounded-full border border-violet/30 bg-violet/10 px-4 py-2 text-sm font-bold uppercase tracking-[0.18em] text-violet">
           Edición de aniversario
         </div>
 
         <h2 class="font-display font-bold text-5xl md:text-7xl leading-none uppercase">
           Cake<br>
-          <span class="text-transparent text-stroke" style="-webkit-text-stroke-color: white;">Festejo</span>
+          <span class="text-brand-1 font-light italic lowercase text-stroke">festejo</span>
         </h2>
 
         <p class="font-body text-white/80 text-lg leading-relaxed max-w-md">
@@ -30,7 +30,7 @@ export function initMenuSection(container: HTMLElement | null) {
         </div>
       </div>
 
-      <div class="menu-product-stage order-1 lg:order-2 relative flex min-h-[260px] items-end justify-end pointer-events-none lg:min-h-[520px]">
+      <div class="menu-product-stage hidden lg:flex relative min-h-[520px] w-full lg:w-1/2 items-end justify-end pointer-events-none">
         <span class="product-orbit" aria-hidden="true"></span>
         <span class="absolute inset-0 flex items-center justify-center font-display font-black text-[clamp(5rem,15vw,13rem)] leading-none text-white/[0.08] select-none" aria-hidden="true">CAKE</span>
       </div>

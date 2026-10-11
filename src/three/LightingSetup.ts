@@ -14,12 +14,12 @@ interface LightPreset {
 }
 
 const PRESETS: Record<FoodSection, LightPreset> = {
-  hero: { // Burger - Sunny, bright, warm
-    ambient: 0.05, hemisphere: 0.3, envIntensity: 0.85,
-    key:  { color: 0xfff0df, intensity: 0.8, position: [4.5, 5.5, 5.5] },
-    fill: { color: 0xff9900, intensity: 0.2, position: [-5, 1.5, 3] },
-    rim:  { color: 0xff3300, intensity: 0.3, position: [-4, 4, -4] },
-    spot: { color: 0xfff2df, intensity: 1.5, position: [0, 7, 4] },
+  hero: { // Burger - Warm artisanal studio, golden brioche rim & rich contact shadows
+    ambient: 0.03, hemisphere: 0.1, envIntensity: 0.3,
+    key:  { color: 0xffeed8, intensity: 1.35, position: [4.5, 5.5, 5.5] },
+    fill: { color: 0xd97525, intensity: 0.45, position: [-5, 1.5, 3] },
+    rim:  { color: 0xffb347, intensity: 0.8,  position: [-4, 4, -4] },
+    spot: { color: 0xffedd0, intensity: 1.9,  position: [0, 7.5, 4] },
   },
   features: { // Pizza - Dark, oven fire, tomato red & golden crust
     ambient: 0.02, hemisphere: 0.05, envIntensity: 0.15,

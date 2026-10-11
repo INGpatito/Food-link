@@ -41,7 +41,6 @@ export class PostProcessingManager {
     // 2. GTAO (Ground Truth Ambient Occlusion) - Realistic crevice shadows (Web RTX)
     this.gtaoPass = new GTAOPass(this.scene, this.camera, window.innerWidth, window.innerHeight);
     this.gtaoPass.output = GTAOPass.OUTPUT.Default;
-    this.gtaoPass.blendMode = THREE.MultiplyBlending;
     this.composer.addPass(this.gtaoPass);
 
     // 3. Cinematic Bloom

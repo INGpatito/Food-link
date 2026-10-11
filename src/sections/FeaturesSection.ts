@@ -2,14 +2,14 @@ export function initFeaturesSection(container: HTMLElement | null) {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="container mx-auto px-6 md:px-8 w-full min-h-[90vh] grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center py-20">
+    <div class="container mx-auto px-6 md:px-8 w-full min-h-[100dvh] flex flex-col lg:flex-row gap-10 lg:gap-16 items-start lg:items-center justify-start pointer-events-none pb-12 lg:pb-0 pt-28 lg:pt-0">
       
-      <div class="menu-product-stage order-1 lg:order-1 relative flex min-h-[260px] items-end justify-start pointer-events-none lg:min-h-[520px]">
+      <div class="menu-product-stage hidden lg:flex relative min-h-[520px] w-full lg:w-1/2 items-end justify-start pointer-events-none">
         <span class="product-orbit" aria-hidden="true"></span>
         <span class="absolute inset-0 flex items-center justify-center font-display font-black text-[clamp(4rem,12vw,10rem)] leading-none text-brand-1/[0.08] select-none" aria-hidden="true">PIZZA</span>
       </div>
 
-      <div class="order-2 lg:order-2 flex flex-col gap-4 md:gap-6 z-10 pointer-events-auto text-brand-1">
+      <div class="w-full lg:w-1/2 flex flex-col gap-4 md:gap-6 z-10 pointer-events-auto text-brand-1 mb-auto lg:mb-0">
         
         <div class="uppercase tracking-widest text-brand-2 text-sm font-bold border-b border-brand-2/30 pb-2 mb-4">
           Capítulo II &mdash; El Horno
@@ -17,7 +17,7 @@ export function initFeaturesSection(container: HTMLElement | null) {
 
         <h2 class="font-display font-bold text-4xl md:text-6xl leading-none uppercase">
           Masa Madre,<br>
-          <span class="text-brand-2 font-light italic lowercase text-stroke">Fuego Directo</span>
+          <span class="text-brand-2 font-light italic lowercase text-stroke">fuego directo</span>
         </h2>
         
         <p class="font-body text-brand-1/80 text-base md:text-lg leading-relaxed mt-2 md:mt-4">

@@ -2,46 +2,33 @@ export function initHeroSection(container: HTMLElement | null) {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="container mx-auto w-full h-full px-5 sm:px-8 flex items-center justify-start pointer-events-none">
+    <div class="container mx-auto w-full min-h-[100dvh] px-5 sm:px-8 flex flex-col md:flex-row items-start md:items-center justify-start pointer-events-none pb-12 md:pb-0 pt-28 md:pt-0">
       <span class="product-orbit product-orbit--hero" aria-hidden="true"></span>
-      <div class="w-full md:w-1/2 flex flex-col gap-5 md:gap-8 z-10 pointer-events-auto">
-        <div class="mb-[-1rem] flex items-center gap-3 text-xs font-bold uppercase tracking-[0.22em] text-brand-4">
-          <span class="h-2 w-2 rounded-full bg-brand-4 shadow-[0_0_14px_rgba(199,69,42,0.55)]"></span>
-          Hamburguesas · pizza · postres
+      <div class="w-full md:w-1/2 flex flex-col gap-4 md:gap-6 z-10 pointer-events-auto mb-auto md:mb-0">
+        <div class="inline-flex items-center gap-2.5 rounded-full border border-brand-2/30 bg-brand-2/10 px-3.5 py-1.5 backdrop-blur-md self-start text-[0.68rem] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand-2 shadow-[0_0_20px_rgba(242,166,90,0.15)]">
+          <span class="h-2 w-2 rounded-full bg-brand-2 animate-pulse shadow-[0_0_10px_rgba(242,166,90,0.8)]"></span>
+          Capítulo I &mdash; Pan Brioche Artesanal &amp; Smash
         </div>
-        <h1 class="font-display font-bold text-[2.5rem] sm:text-5xl md:text-7xl leading-[0.9] tracking-tight uppercase text-charcoal">
+
+        <h1 class="font-display font-bold text-[3rem] sm:text-6xl md:text-7xl lg:text-8xl leading-[0.88] tracking-tight uppercase text-brand-1">
           Comida<br />
-          <span class="text-brand-4 text-stroke relative">
+          <span class="text-transparent relative" style="-webkit-text-stroke: 1.5px #F2A65A;">
             Que Entra
           </span><br />
           Por Los Ojos
         </h1>
         
-        <p class="font-body text-base md:text-xl text-charcoal/80 max-w-md font-medium leading-relaxed">
-          Hamburguesas, pizza y postres hechos para antojarse antes del primer bocado. Ingredientes reales, fuego y pasión.
+        <p class="font-body text-base md:text-lg text-brand-1/80 w-full max-w-sm md:max-w-md font-light leading-relaxed text-balance">
+          Hamburguesas glaseadas en mantequilla avellanada, carne Angus madurada y brioche dorado recién horneado. Fuego, técnica y pasión.
         </p>
 
-        <div class="flex flex-wrap gap-3 md:gap-4 mt-1 md:mt-4">
-          <a href="#menu-root" class="minimal-btn inline-flex items-center justify-center bg-brand-4 text-white border-brand-4 hover:bg-brand-3 hover:border-brand-3">
-            Ver menú
+        <div class="flex flex-wrap items-center gap-3 md:gap-4 mt-2">
+          <a href="#menu-root" class="minimal-btn inline-flex items-center justify-center bg-brand-2 text-charcoal border-brand-2 font-medium hover:bg-brand-1 hover:border-brand-1 shadow-[0_0_24px_rgba(242,166,90,0.3)]">
+            Explorar menú &rarr;
           </a>
-          <a href="#features-root" class="minimal-btn-outline inline-flex items-center justify-center text-charcoal border-charcoal hover:bg-charcoal hover:text-brand-1">
-            Conoce la cocina
+          <a href="#features-root" class="minimal-btn-outline inline-flex items-center justify-center text-brand-1 border-brand-1/40 hover:border-brand-1 hover:bg-brand-1/10">
+            Nuestra cocina
           </a>
-        </div>
-      </div>
-
-      <!-- Floating data clusters -->
-      <div class="absolute right-10 bottom-20 flex flex-col gap-2 pointer-events-auto text-charcoal font-body text-sm font-bold tracking-wider hidden md:flex">
-        <div class="editorial-block border-brand-4">
-          <span class="block text-brand-4 mb-1 uppercase text-xs">The Classic</span>
-          <span class="text-xl">100% Angus</span>
-        </div>
-      </div>
-      <div class="absolute right-32 top-32 flex flex-col gap-2 pointer-events-auto text-charcoal font-body text-sm font-bold tracking-wider hidden md:flex">
-         <div class="editorial-block border-brand-2">
-          <span class="block text-brand-3 mb-1 uppercase text-xs">Cocción</span>
-          <span class="text-xl">Carbón &amp; Leña</span>
         </div>
       </div>
     </div>

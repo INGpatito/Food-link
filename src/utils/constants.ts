@@ -58,15 +58,15 @@ export const MODEL_TRANSITIONS = {
 
 export const SECTION_THEMES = {
   hero: {
-    backgroundColor: '#F8EDE0',
-    color: '#181512',
-    '--ambient-model': 'rgba(235, 110, 35, 0.40)',
-    '--ambient-primary': 'rgba(245, 175, 75, 0.25)',
-    '--ambient-secondary': 'rgba(215, 65, 35, 0.15)',
+    backgroundColor: '#201610',
+    color: '#FBE5C8',
+    '--ambient-model': 'rgba(245, 166, 65, 0.55)',
+    '--ambient-primary': 'rgba(230, 135, 45, 0.40)',
+    '--ambient-secondary': 'rgba(185, 85, 25, 0.30)',
     '--model-glow-x': '72%',
     '--model-glow-y': '48%',
-    '--ambient-primary-pos': '20% 30%',
-    '--ambient-secondary-pos': '50% 85%'
+    '--ambient-primary-pos': '22% 32%',
+    '--ambient-secondary-pos': '60% 80%'
   },
   features: {
     backgroundColor: '#12100E',
