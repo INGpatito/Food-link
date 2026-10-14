@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="es" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOODLINK — El Arte de Rescatar el Sabor | Red Gastronomica 3D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Three.js r152+ with addons for post-processing bloom -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.163.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.163.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#0a0c0b',
+                        charcoal: '#111513',
+                        terracotta: '#e05a36',
+                        saffron: '#f4a261',
+                        sage: '#8ab17d',
+                        cream: '#f5f2eb',
+                        muted: '#9ca39e'
+                    },
+                    fontFamily: {
+                        display: ['Syne', 'sans-serif'],
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        :root {
+            --bg-primary: #0a0c0b;
+            --accent-terracotta: #e05a36;
+            --accent-saffron: #f4a261;
+            --accent-sage: #8ab17d;
+            --text-cream: #f5f2eb;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-cream);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+
+        ::selection {
+            background: rgba(224, 90, 54, 0.35);
+            color: #f5f2eb;
+        }
+
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #0a0c0b; }
+        ::-webkit-scrollbar-thumb { background: #2b332e; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #e05a36; }
+
+        #webgl-container {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        body.inspect-mode #webgl-container {
+            pointer-events: auto;
+            cursor: grab;
+        }
+
+        body.inspect-mode #webgl-container:active {
+            cursor: grabbing;
+        }
+
+        .atmosphere-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background:
+                radial-gradient(ellipse 70% 60% at 50% 48%, transparent 25%, rgba(10, 12, 11, 0.65) 100%),
+                linear-gradient(180deg, rgba(10, 12, 11, 0.45) 0%, transparent 15%, transparent 85%, rgba(10, 12, 11, 0.7) 100%);
+        }
+
+        .grid-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-size: 64px 64px;
+            background-image:
+                linear-gradient(to right, rgba(245, 242, 235, 0.02) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(245, 242, 235, 0.02) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 85%);
+            -webkit-mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 85%);
+        }
+
+        #scroll-content {
+            position: relative;
+            z-index: 10;
+            pointer-events: none;
+            transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        body.inspect-mode #scroll-content {
+            opacity: 0.12;
+        }
+
+        .interactive-el { pointer-events: auto; }
+        body.inspect-mode .interactive-el:not(.keep-interactive) { pointer-events: none; }
+
+        .hud-glass {
+            background: rgba(12, 16, 14, 0.72);
+            backdrop-filter: blur(20px) saturate(1.3);
+            -webkit-backdrop-filter: blur(20px) saturate(1.3);
+            border: 1px solid rgba(245, 242, 235, 0.08);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(245, 242, 235, 0.04);
+        }
+
+        .hud-glass-accent {
+            background: linear-gradient(135deg, rgba(224, 90, 54, 0.12) 0%, rgba(14, 18, 16, 0.82) 100%);
+            backdrop-filter: blur(20px) saturate(1.3);
+            -webkit-backdrop-filter: blur(20px) saturate(1.3);
+            border: 1px solid rgba(224, 90, 54, 0.28);
+            box-shadow: 0 12px 40px rgba(224, 90, 54, 0.1);
+        }
+
+        .hero-title {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 0.88;
+            background: linear-gradient(180deg, #f5f2eb 0%, #e8ddd0 45%, #c4b8a8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stage-panel {
+            transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        input[type=range].hud-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 4px;
+            background: rgba(245, 242, 235, 0.12);
+            border-radius: 999px;
+            outline: none;
+        }
+        input[type=range].hud-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #e05a36;
+            border: 2px solid #f5f2eb;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(224, 90, 54, 0.5);
+            transition: transform 0.2s ease;
+        }
+        input[type=range].hud-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+        }
+
+        @keyframes pulseRing {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 0.3; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .pulse-indicator { animation: pulseRing 2.5s infinite ease-in-out; }
+
+        @keyframes subtleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .float-subtle { animation: subtleFloat 3s infinite ease-in-out; }
+    </style>
+</head>
+<body class="bg-obsidian text-cream antialiased selection:bg-terracotta/30">
+
+    <div class="grid-backdrop"></div>
+    <div id="webgl-container" aria-label="Escena 3D interactiva de Foodlink"></div>
+    <div class="atmosphere-overlay"></div>
+
+    <!-- Fixed Top Navigation & Telemetry Header -->
+    <header class="fixed top-0 left-0 right-0 z-30 px-4 sm:px-8 py-4 sm:py-5 pointer-events-none">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <!-- Brand Identity -->
+            <a href="#stage-1" onclick="scrollToStage(0); return false;" class="interactive-el keep-interactive group flex items-center gap-3.5 hud-glass px-4 py-2.5 rounded-full transition-all duration-300 hover:border-terracotta/50">
+                <div class="relative w-8 h-8 flex items-center justify-center rounded-full bg-terracotta/15 border border-terracotta/40 group-hover:bg-terracotta/25 transition-colors">
+                    <svg class="w-4 h-4 text-terracotta transition-transform duration-500 group-hover:rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <circle cx="12" cy="12" r="9" stroke-dasharray="4 2" />
+                        <circle cx="12" cy="12" r="4" />
+                        <path d="M12 3v5M12 16v5M3 12h5M16 12h5" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <div class="flex flex-col">
+                    <span class="font-display font-bold tracking-wider text-sm sm:text-base text-cream leading-none">FOODLINK</span>
+                    <span class="font-mono text-[9px] tracking-[0.22em] text-muted uppercase mt-0.5">SISTEMA GASTRONOMICO CERO RESIDUO</span>
+                </div>
+            </a>
+
+            <!-- Center Stage Navigation Pills (Desktop) -->
+            <nav class="hidden lg:flex items-center gap-1 hud-glass p-1.5 rounded-full interactive-el keep-interactive" aria-label="Etapas de la experiencia">
+                <button onclick="scrollToStage(0)" data-nav-stage="0" class="stage-nav-btn px-4 py-1.5 rounded-full font-mono text-xs tracking-wider transition-all duration-300 bg-terracotta text-obsidian font-medium">
+                    01. ORIGEN
+                </button>
+                <button onclick="scrollToStage(0.36)" data-nav-stage="1" class="stage-nav-btn px-4 py-1.5 rounded-full font-mono text-xs tracking-wider text-cream/70 hover:text-cream transition-all duration-300">
+                    02. FONDAS Y COCINAS
+                </button>
+                <button onclick="scrollToStage(0.68)" data-nav-stage="2" class="stage-nav-btn px-4 py-1.5 rounded-full font-mono text-xs tracking-wider text-cream/70 hover:text-cream transition-all duration-300">
+                    03. NODO ACTIVO
+                </button>
+                <button onclick="scrollToStage(0.96)" data-nav-stage="3" class="stage-nav-btn px-4 py-1.5 rounded-full font-mono text-xs tracking-wider text-cream/70 hover:text-cream transition-all duration-300">
+                    04. MANIFIESTO
+                </button>
+            </nav>
+
+            <!-- Right Controls -->
+            <div class="flex items-center gap-2.5 interactive-el keep-interactive">
+                <div class="hud-glass rounded-full p-1 hidden sm:flex items-center gap-1" role="group" aria-label="Ambiente luminico 3D">
+                    <button onclick="setLightingMood('terracotta')" id="mood-terracotta" class="mood-btn px-3 py-1.5 rounded-full font-mono text-[10px] tracking-widest uppercase transition-all bg-terracotta/25 text-saffron border border-terracotta/40" title="Iluminacion Calido Terracota">
+                        TERRACOTA
+                    </button>
+                    <button onclick="setLightingMood('emerald')" id="mood-emerald" class="mood-btn px-3 py-1.5 rounded-full font-mono text-[10px] tracking-widest uppercase text-cream/60 hover:text-cream transition-all border border-transparent" title="Iluminacion Nocturno Esmeralda">
+                        ESMERALDA
+                    </button>
+                    <button onclick="setLightingMood('studio')" id="mood-studio" class="mood-btn px-3 py-1.5 rounded-full font-mono text-[10px] tracking-widest uppercase text-cream/60 hover:text-cream transition-all border border-transparent" title="Iluminacion Estudio Puro">
+                        ESTUDIO
+                    </button>
+                </div>
+
+                <button id="toggle-inspect-btn" onclick="toggleInspectMode()" class="hud-glass hover:border-saffron/60 px-4 py-2.5 rounded-full flex items-center gap-2.5 transition-all duration-300 group">
+                    <span id="inspect-status-dot" class="w-2 h-2 rounded-full bg-sage pulse-indicator"></span>
+                    <span id="inspect-btn-label" class="font-mono text-xs tracking-wider uppercase text-cream">INSPECCION 3D</span>
+                    <svg class="w-3.5 h-3.5 text-saffron transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Floating Free-Inspection Control Panel -->
+    <div id="inspect-hud-panel" class="fixed top-24 left-1/2 -translate-x-1/2 z-40 hud-glass-accent px-6 py-4 rounded-2xl w-[92vw] max-w-xl opacity-0 pointer-events-none translate-y-[-12px] transition-all duration-500">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-[10px] uppercase tracking-[0.2em] text-saffron">MODO LABORATORIO 3D ACTIVO</span>
+                </div>
+                <p class="text-xs text-cream/80 mt-0.5">Arrastra en la escena para rotar la escultura culinaria o ajusta la apertura explosiva.</p>
+            </div>
+            <div class="flex items-center gap-3 min-w-[200px]">
+                <span class="font-mono text-[10px] uppercase tracking-wider text-cream/70">APERTURA</span>
+                <input id="manual-explode-slider" type="range" min="0" max="1" step="0.01" value="0.45" class="hud-slider interactive-el keep-interactive">
+                <button onclick="toggleInspectMode()" class="px-3 py-1 rounded-lg bg-cream text-obsidian font-mono text-[10px] font-semibold uppercase tracking-wider hover:bg-saffron transition-colors">
+                    VOLVER
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fixed Bottom Telemetry Bar -->
+    <div class="fixed bottom-0 left-0 right-0 z-30 px-4 sm:px-8 py-4 pointer-events-none">
+        <div class="max-w-7xl mx-auto flex items-end justify-between gap-4">
+            <div class="hud-glass px-4 py-2.5 rounded-2xl flex items-center gap-4 sm:gap-6">
+                <div class="flex items-center gap-2">
+                    <span class="font-mono text-[10px] text-muted uppercase tracking-widest">ETAPA</span>
+                    <span id="hud-stage-index" class="font-mono text-xs sm:text-sm font-semibold text-saffron">01 / 04</span>
+                </div>
+                <div class="h-4 w-[1px] bg-cream/10"></div>
+                <div class="hidden md:flex items-center gap-4 font-mono text-[11px] text-cream/75">
+                    <div><span class="text-muted">ROT_Y:</span> <span id="hud-roty">0.00</span>rad</div>
+                    <div><span class="text-muted">CLOCHE_Z:</span> <span id="hud-lift">0.00</span>m</div>
+                    <div><span class="text-muted">NODOS:</span> <span id="hud-nodes" class="text-sage">ACTIVOS</span></div>
+                </div>
+                <div class="w-24 sm:w-36 h-1.5 bg-cream/10 rounded-full overflow-hidden">
+                    <div id="hud-scroll-bar" class="h-full bg-gradient-to-r from-terracotta via-saffron to-sage w-0 transition-all duration-75"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 interactive-el keep-interactive">
+                <div id="scroll-indicator-pill" class="hud-glass px-4 py-2.5 rounded-full flex items-center gap-3">
+                    <span class="font-mono text-[10px] tracking-[0.2em] uppercase text-cream/80" id="scroll-prompt-text">DESLIZA PARA EXPLORAR EN 3D</span>
+                    <div class="w-4 h-6 rounded-full border border-cream/30 flex items-start justify-center p-1">
+                        <div class="w-1 h-1.5 rounded-full bg-terracotta animate-bounce"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCROLL STORYTELLING CONTAINER -->
+    <main id="scroll-content" class="relative w-full">
+
+        <!-- STAGE 1: HERO -->
+        <section id="stage-1" class="relative min-h-[115vh] w-full flex flex-col justify-between pt-28 pb-24 px-4 sm:px-8 max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-4 sm:mt-8">
+                <div class="lg:col-span-7 space-y-4">
+                    <div class="inline-flex items-center gap-2.5 hud-glass px-3.5 py-1.5 rounded-full">
+                        <span class="w-2 h-2 rounded-full bg-terracotta"></span>
+                        <span class="font-mono text-[11px] tracking-[0.22em] uppercase text-saffron">ARQUITECTURA DE RESCATE GASTRONOMICO</span>
+                    </div>
+                    <h1 class="hero-title text-5xl sm:text-7xl lg:text-[6.4rem] tracking-tight uppercase">
+                        FOODLINK
+                    </h1>
+                    <p class="font-display text-lg sm:text-2xl text-cream/90 tracking-wide uppercase max-w-xl">
+                        El arte de rescatar el sabor antes de que termine el servicio.
+                    </p>
+                </div>
+
+                <div class="lg:col-span-5 lg: flex lg:justify-end">
+                    <div class="hud-glass p-5 sm:p-6 rounded-3xl max-w-sm space-y-4 border-l-2 border-l-terracotta interactive-el">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono text-[10px] tracking-[0.2em] uppercase text-muted">TELEMETRIA DEL OBJETO 01</span>
+                            <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-terracotta/20 text-terracotta">3D TIEMPO REAL</span>
+                        </div>
+                        <p class="text-xs sm:text-sm text-cream/80 leading-relaxed">
+                            Cada dia, miles de restaurantes, fondas tradicionales y cocinas de autor producen platillos extraordinarios que no logran venderse al cierre.
+                        </p>
+                        <div class="pt-2 border-t border-cream/10 flex items-center justify-between font-mono text-[11px]">
+                            <span class="text-sage">LATENCIA DE RED: 12MS</span>
+                            <span class="text-cream/60">DESPLAZA EL SCROLL</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end my-auto pt-44 sm:pt-56">
+                <div class="hud-glass p-4 rounded-2xl max-w-xs space-y-1.5">
+                    <div class="font-mono text-[10px] text-saffron tracking-widest uppercase">CAPA SUPERIOR // CAMPANA DE COBRE</div>
+                    <p class="text-xs text-cream/75 leading-relaxed">
+                        Simboliza la alta cocina y la preservacion termica del alimento recien preparado esperando ser descubierto.
+                    </p>
+                </div>
+
+                <div class="hidden md:flex justify-center"></div>
+
+                <div class="md: flex md:justify-end">
+                    <div class="hud-glass p-4 rounded-2xl max-w-xs space-y-2 interactive-el">
+                        <div class="font-mono text-[10px] text-sage tracking-widest uppercase">INTERACCION DIRECTA</div>
+                        <p class="text-xs text-cream/75 leading-relaxed">
+                            Al hacer scroll, la campana se eleva y descompone los elementos de las cocinas locales en el espacio tridimensional.
+                        </p>
+                        <button onclick="scrollToStage(0.36)" class="w-full pt-1 flex items-center justify-between font-mono text-[11px] text-terracotta hover:text-saffron transition-colors">
+                            <span>INICIAR DESCOMPOSICION 3D</span>
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M7 13l5 5 5-5M7 6l5 5 5-5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STAGE 2: COCINAS Y FONDAS -->
+        <section id="stage-2" class="relative min-h-[125vh] w-full flex items-center py-24 px-4 sm:px-8 max-w-7xl mx-auto">
+            <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div class="lg:col-span-5 space-y-6">
+                    <div class="hud-glass p-6 sm:p-8 rounded-3xl space-y-6 interactive-el">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono text-xs uppercase tracking-[0.22em] text-terracotta">ETAPA 02 // EL ORIGEN</span>
+                            <span class="font-mono text-[11px] text-cream/50">EXPLOSION GEOMETRICA</span>
+                        </div>
+
+                        <h2 class="font-display text-3xl sm:text-5xl font-bold tracking-tight leading-[0.96] text-cream uppercase">
+                            DE LA FONDA DE BARRIO A LA COCINA DE AUTOR
+                        </h2>
+
+                        <p class="text-sm sm:text-base text-cream/80 leading-relaxed">
+                            En el centro de nuestra escultura 3D emerge la <strong class="text-saffron font-medium">cazuela de barro tradicional</strong> junto al plato de ceramica artesanal. Ambos mundos comparten el mismo desafio: el excedente diario de comida impecable que pierde su valor al caer la noche.
+                        </p>
+
+                        <div class="space-y-3 pt-2">
+                            <div class="flex items-start gap-3.5 p-3 rounded-2xl bg-charcoal/80 border border-cream/5">
+                                <div class="w-8 h-8 rounded-xl bg-terracotta/15 border border-terracotta/40 flex items-center justify-center shrink-0 mt-0.5">
+                                    <svg class="w-4 h-4 text-terracotta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <path d="M3 11h18v2a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8v-2z"/>
+                                        <path d="M5 11V7a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v4"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-display text-sm font-bold uppercase tracking-wide text-cream">FONDAS Y COCINAS ECONOMICAS</h3>
+                                    <p class="text-xs text-cream/70 mt-0.5">Guisos del dia, preparaciones caseras y sazon tradicional integrados a la red en segundos.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-3.5 p-3 rounded-2xl bg-charcoal/80 border border-cream/5">
+                                <div class="w-8 h-8 rounded-xl bg-saffron/15 border border-saffron/40 flex items-center justify-center shrink-0 mt-0.5">
+                                    <svg class="w-4 h-4 text-saffron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <circle cx="12" cy="12" r="9"/>
+                                        <circle cx="12" cy="12" r="5"/>
+                                        <line x1="12" y1="3" x2="12" y2="5"/>
+                                        <line x1="12" y1="19" x2="12" y2="21"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-display text-sm font-bold uppercase tracking-wide text-cream">RESTAURANTES Y PANADERIAS</h3>
+                                    <p class="text-xs text-cream/70 mt-0.5">Platillos de linea y horneados frescos que mantienen su dignidad culinaria y retorno economico.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-3 hidden lg:block"></div>
+
+                <div class="lg:col-span-4 space-y-4">
+                    <div class="hud-glass-accent p-5 rounded-3xl space-y-2 interactive-el">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono text-[10px] tracking-widest uppercase text-saffron">ELEMENTO 3D // CAZUELA DE BARRO</span>
+                            <span class="w-2 h-2 rounded-full bg-terracotta"></span>
+                        </div>
+                        <p class="font-display text-lg font-bold text-cream uppercase">PATRIMONIO CULINARIO VIVO</p>
+                        <p class="text-xs text-cream/75 leading-relaxed">
+                            Modelada proceduralmente con acabado terracota satinado, representa las miles de fondas que alimentan la ciudad cada tarde.
+                        </p>
+                    </div>
+
+                    <div class="hud-glass p-5 rounded-3xl space-y-2 interactive-el">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono text-[10px] tracking-widest uppercase text-sage">ELEMENTO 3D // ESFERAS DE SABOR</span>
+                            <span class="w-2 h-2 rounded-full bg-sage"></span>
+                        </div>
+                        <p class="font-display text-lg font-bold text-cream uppercase">INGREDIENTES EN GRAVEDAD CERO</p>
+                        <p class="text-xs text-cream/75 leading-relaxed">
+                            Los anillos de reduccion, hojas botanicas y nucleos de azafran orbitan demostrando que cada ingrediente conserva su frescura.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STAGE 3: CONEXION EN TIEMPO REAL -->
+        <section id="stage-3" class="relative min-h-[125vh] w-full flex items-center py-24 px-4 sm:px-8 max-w-7xl mx-auto">
+            <div class="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div class="lg:col-span-4 space-y-4 order-2 lg:order-1">
+                    <div class="hud-glass p-5 rounded-3xl space-y-3 interactive-el border-t-2 border-t-sage">
+                        <div class="flex items-center justify-between">
+                            <span class="font-mono text-[10px] uppercase tracking-widest text-sage">NODO LOGISTICO 3D</span>
+                            <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-sage/20 text-sage">SINCRONIZADO</span>
+                        </div>
+                        <h3 class="font-display text-xl font-bold uppercase text-cream">CAPSULA MODULAR DE RESCATE</h3>
+                        <p class="text-xs text-cream/75 leading-relaxed">
+                            Observa como el contenedor isotermico abre sus compuertas superiores en el espacio 3D, recibiendo el flujo energetico de los anillos FOODLINK.
+                        </p>
+                        <div class="grid grid-cols-2 gap-2 pt-2">
+                            <div class="p-2.5 rounded-xl bg-obsidian/70 border border-cream/5">
+                                <div class="font-mono text-[10px] text-muted">TIEMPO DE ENLACE</div>
+                                <div class="font-display text-lg font-bold text-saffron">&lt; 18 MIN</div>
+                            </div>
+                            <div class="p-2.5 rounded-xl bg-obsidian/70 border border-cream/5">
+                                <div class="font-mono text-[10px] text-muted">TRAZABILIDAD</div>
+                                <div class="font-display text-lg font-bold text-sage">100% VERIFICADA</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hud-glass p-5 rounded-3xl space-y-3 interactive-el">
+                        <div class="font-mono text-[10px] uppercase tracking-widest text-saffron">PULSO DE LA RED // METRICAS</div>
+                        <div class="space-y-2.5">
+                            <div>
+                                <div class="flex justify-between font-mono text-[11px] mb-1">
+                                    <span class="text-cream/80">EXCEDENTE GASTRONOMICO ACTIVO</span>
+                                    <span class="text-terracotta">94.2% RESCATADO</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-cream/10 rounded-full overflow-hidden">
+                                    <div class="h-full bg-terracotta w-[94%] rounded-full"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between font-mono text-[11px] mb-1">
+                                    <span class="text-cream/80">RED DE COCINAS Y FONDAS LOCALES</span>
+                                    <span class="text-sage">EN LINEA</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-cream/10 rounded-full overflow-hidden">
+                                    <div class="h-full bg-sage w-[88%] rounded-full"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-3 hidden lg:block order-2"></div>
+
+                <div class="lg:col-span-5 space-y-6 order-1 lg:order-3">
+                    <div class="hud-glass p-6 sm:p-8 rounded-3xl space-y-6 interactive-el">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sage/15 border border-sage/30">
+                            <span class="w-1.5 h-1.5 rounded-full bg-sage"></span>
+                            <span class="font-mono text-[10px] uppercase tracking-[0.2em] text-sage">ETAPA 03 // CONEXION EN TIEMPO REAL</span>
+                        </div>
+
+                        <h2 class="font-display text-3xl sm:text-5xl font-bold tracking-tight leading-[0.95] text-cream uppercase">
+                            EL PUENTE ENTRE LA COCINA Y LA COMUNIDAD
+                        </h2>
+
+                        <p class="text-sm sm:text-base text-cream/80 leading-relaxed">
+                            Los <strong class="text-terracotta font-medium">anillos orbitales de Foodlink</strong> se alinean para enlazar la oferta real de cada cocina con personas cercanas que valoran la buena gastronomia a una fraccion de su costo original.
+                        </p>
+
+                        <div class="pt-2 border-t border-cream/10 flex flex-wrap items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl bg-terracotta/20 border border-terracotta/40 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-terracotta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="font-mono text-[10px] text-muted uppercase">IMPACTO INMEDIATO</div>
+                                    <div class="font-display text-sm font-bold text-cream uppercase">CERO DESPERDICIO AL CIERRE</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STAGE 4: MANIFIESTO -->
+        <section id="stage-4" class="relative min-h-[115vh] w-full flex flex-col justify-between py-28 px-4 sm:px-8 max-w-7xl mx-auto">
+            <div class="max-w-3xl mx-auto text-center space-y-4">
+                <div class="inline-flex items-center gap-2 hud-glass px-4 py-1.5 rounded-full">
+                    <span class="w-2 h-2 rounded-full bg-saffron"></span>
+                    <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-saffron">ETAPA 04 // CONVERGENCIA Y ACCION</span>
+                </div>
+                <h2 class="hero-title text-4xl sm:text-6xl lg:text-7xl uppercase">
+                    NINGUN PLATILLO DEBE PERDERSE
+                </h2>
+                <p class="text-sm sm:text-base text-cream/80 max-w-xl mx-auto leading-relaxed">
+                    Todos los elementos de nuestra arquitectura culinaria convergen en equilibrio. Unete a la red que transforma el excedente de restaurantes, fondas y cocinas en valor real.
+                </p>
+            </div>
+
+            <div class="my-auto py-28"></div>
+
+            <div class="max-w-4xl mx-auto w-full hud-glass p-6 sm:p-8 rounded-3xl interactive-el border border-terracotta/30">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                    <div class="md:col-span-7 space-y-2">
+                        <div class="font-mono text-[10px] tracking-[0.22em] uppercase text-sage">CONVOCATORIA ABIERTA // RED FOODLINK</div>
+                        <h3 class="font-display text-2xl sm:text-3xl font-bold text-cream uppercase">
+                            INTEGRA TU RESTAURANTE, FONDA O COCINA
+                        </h3>
+                        <p class="text-xs sm:text-sm text-cream/75">
+                            Activa tu nodo gastronomico o explora la escultura 3D en modo libre para inspeccionar cada detalle del diseno.
+                        </p>
+                    </div>
+                    <div class="md:col-span-5 flex flex-col sm:flex-row md:flex-col gap-3">
+                        <button onclick="openJoinModal('kitchen')" class="w-full py-3.5 px-6 rounded-2xl bg-terracotta hover:bg-saffron text-obsidian font-display font-bold text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-terracotta/25">
+                            <span>REGISTRAR COCINA O FONDA</span>
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                        <button onclick="toggleInspectMode()" class="w-full py-3 px-6 rounded-2xl bg-charcoal hover:bg-cream/10 text-cream border border-cream/15 font-mono text-xs uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2">
+                            <span>INSPECCIONAR ESCULTURA 3D</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Registration Modal -->
+    <div id="join-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300" aria-hidden="true">
+        <div class="hud-glass max-w-lg w-full rounded-3xl p-6 sm:p-8 border border-terracotta/40 space-y-6 transform scale-95 transition-transform duration-300" id="join-modal-card">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <span class="font-mono text-[10px] uppercase tracking-[0.22em] text-terracotta">PROTOCOLO DE REGISTRO // FOODLINK</span>
+                    <h3 class="font-display text-2xl sm:text-3xl font-bold uppercase text-cream mt-1">ACTIVAR NODO GASTRONOMICO</h3>
+                </div>
+                <button onclick="closeJoinModal()" class="p-2 rounded-full bg-charcoal border border-cream/10 text-cream/70 hover:text-cream hover:border-terracotta transition-colors" aria-label="Cerrar ventana">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="foodlink-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block font-mono text-[10px] uppercase tracking-widest text-cream/70 mb-1.5">NOMBRE DEL ESTABLECIMIENTO</label>
+                    <input type="text" required placeholder="Ej. Fonda Santa Clara / Cocina Raiz" class="w-full px-4 py-3 rounded-xl bg-obsidian/90 border border-cream/15 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-mono text-[10px] uppercase tracking-widest text-cream/70 mb-1.5">CATEGORIA CULINARIA</label>
+                        <select class="w-full px-4 py-3 rounded-xl bg-obsidian/90 border border-cream/15 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
+                            <option value="fonda">Fonda Tradicional</option>
+                            <option value="restaurante">Restaurante</option>
+                            <option value="cocina">Cocina Economica / De Autor</option>
+                            <option value="panaderia">Panaderia / Pasteleria</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-mono text-[10px] uppercase tracking-widest text-cream/70 mb-1.5">EXCEDENTE ESTIMADO DIARIO</label>
+                        <select class="w-full px-4 py-3 rounded-xl bg-obsidian/90 border border-cream/15 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
+                            <option value="5-15">5 a 15 porciones</option>
+                            <option value="15-40">15 a 40 porciones</option>
+                            <option value="40+">Mas de 40 porciones</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-mono text-[10px] uppercase tracking-widest text-cream/70 mb-1.5">CORREO O CONTACTO DIRECTO</label>
+                    <input type="email" required placeholder="contacto@tucocina.mx" class="w-full px-4 py-3 rounded-xl bg-obsidian/90 border border-cream/15 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
+                </div>
+
+                <div id="form-feedback" class="hidden p-3.5 rounded-xl bg-sage/20 border border-sage/40 text-sage font-mono text-xs">
+                    SOLICITUD REGISTRADA EN EL NODO CENTRAL. NUESTRO EQUIPO VINCULARA TU COCINA EN MENOS DE 24 HORAS.
+                </div>
+
+                <div class="pt-2 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeJoinModal()" class="px-5 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider text-cream/70 hover:text-cream">
+                        CANCELAR
+                    </button>
+                    <button type="submit" class="px-6 py-3 rounded-xl bg-terracotta hover:bg-saffron text-obsidian font-display font-bold text-xs uppercase tracking-wider transition-colors">
+                        VINCULAR A FOODLINK
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================================================
+         THREE.JS 3D ENGINE — ENHANCED WITH BLOOM POST-PROCESSING & RICH MATERIALS
+         ======================================================================== -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+        // ============================
+        // STATE
+        // ============================
+        const state = {
+            targetScroll: 0,
+            currentScroll: 0,
+            scrollVelocity: 0,
+            mouseX: 0,
+            mouseY: 0,
+            targetMouseX: 0,
+            targetMouseY: 0,
+            inspectMode: false,
+            isDragging: false,
+            prevPointerX: 0,
+            prevPointerY: 0,
+            manualRotX: 0.25,
+            manualRotY: 0.5,
+            manualExplode: 0.45,
+            currentMood: 'terracotta',
+            clock: new THREE.Clock()
+        };
+
+        function lerp(start, end, amt) {
+            return (1 - amt) * start + amt * end;
+        }
+
+        function smoothstep(min, max, value) {
+            const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+            return x * x * (3 - 2 * x);
+        }
+
+        // ============================
+        // RENDERER & SCENE SETUP
+        // ============================
+        const container = document.getElementById('webgl-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0a0c0b, 0.032);
+
+        const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 1.4, 9.2);
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: true,
+            powerPreference: 'high-performance'
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // ============================
+        // POST-PROCESSING — BLOOM
+        // ============================
+        const composer = new EffectComposer(renderer);
+        const renderPass = new RenderPass(scene, camera);
+        composer.addPass(renderPass);
+
+        const bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            0.55,   // strength — subtle but visible glow
+            0.42,   // radius
+            0.78    // threshold
+        );
+        composer.addPass(bloomPass);
+
+        const outputPass = new OutputPass();
+        composer.addPass(outputPass);
+
+        // ============================
+        // PROCEDURAL STUDIO ENVIRONMENT
+        // ============================
+        function createStudioEnvironment(rendererInstance) {
+            const pmremGenerator = new THREE.PMREMGenerator(rendererInstance);
+            pmremGenerator.compileEquirectangularShader();
+
+            const envScene = new THREE.Scene();
+            envScene.background = new THREE.Color(0x0a0c0b);
+
+            // Warm top softbox — larger and more diffuse
+            const topPanel = new THREE.Mesh(
+                new THREE.PlaneGeometry(22, 22),
+                new THREE.MeshBasicMaterial({ color: 0xfff5e6, side: THREE.DoubleSide })
+            );
+            topPanel.position.set(0, 10, 0);
+            topPanel.rotation.x = Math.PI / 2;
+            envScene.add(topPanel);
+
+            // Terracotta warm rim panel
+            const leftPanel = new THREE.Mesh(
+                new THREE.PlaneGeometry(16, 12),
+                new THREE.MeshBasicMaterial({ color: 0xe05a36, side: THREE.DoubleSide })
+            );
+            leftPanel.position.set(-10, 2, 3);
+            leftPanel.lookAt(0, 0, 0);
+            envScene.add(leftPanel);
+
+            // Sage cool fill panel
+            const rightPanel = new THREE.Mesh(
+                new THREE.PlaneGeometry(16, 12),
+                new THREE.MeshBasicMaterial({ color: 0x8ab17d, side: THREE.DoubleSide })
+            );
+            rightPanel.position.set(10, 1, -2);
+            rightPanel.lookAt(0, 0, 0);
+            envScene.add(rightPanel);
+
+            // Saffron front accent halo
+            const frontStrip = new THREE.Mesh(
+                new THREE.RingGeometry(5, 6, 64),
+                new THREE.MeshBasicMaterial({ color: 0xf4a261, side: THREE.DoubleSide })
+            );
+            frontStrip.position.set(0, 2, 9);
+            envScene.add(frontStrip);
+
+            // Bottom dark floor reflection
+            const bottomPanel = new THREE.Mesh(
+                new THREE.PlaneGeometry(22, 22),
+                new THREE.MeshBasicMaterial({ color: 0x060807, side: THREE.DoubleSide })
+            );
+            bottomPanel.position.set(0, -10, 0);
+            bottomPanel.rotation.x = -Math.PI / 2;
+            envScene.add(bottomPanel);
+
+            const envMap = pmremGenerator.fromScene(envScene, 0.04).texture;
+            pmremGenerator.dispose();
+            return envMap;
+        }
+
+        scene.environment = createStudioEnvironment(renderer);
+
+        // ============================
+        // ENHANCED LIGHTING
+        // ============================
+        const ambientLight = new THREE.AmbientLight(0xf5f2eb, 0.3);
+        scene.add(ambientLight);
+
+        // Key light with shadows
+        const keyLight = new THREE.SpotLight(0xfff0dd, 4.0);
+        keyLight.position.set(6, 10, 7);
+        keyLight.angle = Math.PI / 3;
+        keyLight.penumbra = 0.9;
+        keyLight.decay = 1.5;
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.set(1024, 1024);
+        keyLight.shadow.bias = -0.001;
+        scene.add(keyLight);
+
+        // Dramatic terracotta rim light
+        const rimLightTerracotta = new THREE.PointLight(0xe05a36, 5.0, 20);
+        rimLightTerracotta.position.set(-6, 3, -4);
+        scene.add(rimLightTerracotta);
+
+        // Sage fill from below-right
+        const fillLightSage = new THREE.PointLight(0x8ab17d, 3.0, 18);
+        fillLightSage.position.set(5.5, -3, 3.5);
+        scene.add(fillLightSage);
+
+        // Inner core glow — saffron warmth emanating from the center
+        const coreGlowLight = new THREE.PointLight(0xf4a261, 3.5, 10);
+        coreGlowLight.position.set(0, 0.5, 0);
+        scene.add(coreGlowLight);
+
+        // Accent back light — cool blue-violet for depth separation
+        const backLight = new THREE.PointLight(0x4a6fa5, 2.0, 16);
+        backLight.position.set(0, 4, -8);
+        scene.add(backLight);
+
+        // ============================
+        // ENHANCED PBR MATERIALS
+        // ============================
+        const materials = {
+            brushedCopper: new THREE.MeshPhysicalMaterial({
+                color: 0xd4854f,
+                metalness: 0.95,
+                roughness: 0.18,
+                clearcoat: 0.8,
+                clearcoatRoughness: 0.12,
+                reflectivity: 1.0,
+                iridescence: 0.15,
+                iridescenceIOR: 1.8,
+                sheen: 0.1,
+                sheenRoughness: 0.3,
+                sheenColor: new THREE.Color(0xffd4b8)
+            }),
+
+            brassGold: new THREE.MeshPhysicalMaterial({
+                color: 0xf4a261,
+                metalness: 0.97,
+                roughness: 0.1,
+                clearcoat: 0.9,
+                clearcoatRoughness: 0.06,
+                iridescence: 0.2,
+                iridescenceIOR: 2.0,
+                emissive: 0x2b1a04,
+                emissiveIntensity: 0.3
+            }),
+
+            darkCeramic: new THREE.MeshPhysicalMaterial({
+                color: 0x161a18,
+                metalness: 0.06,
+                roughness: 0.2,
+                clearcoat: 0.95,
+                clearcoatRoughness: 0.08,
+                sheen: 0.2,
+                sheenRoughness: 0.2,
+                sheenColor: new THREE.Color(0x2a3a2e)
+            }),
+
+            creamStoneware: new THREE.MeshPhysicalMaterial({
+                color: 0xf2ede3,
+                metalness: 0.03,
+                roughness: 0.32,
+                clearcoat: 0.55,
+                clearcoatRoughness: 0.18,
+                sheen: 0.15,
+                sheenRoughness: 0.5,
+                sheenColor: new THREE.Color(0xfff5e8)
+            }),
+
+            terracottaClay: new THREE.MeshPhysicalMaterial({
+                color: 0xc84b28,
+                metalness: 0.04,
+                roughness: 0.52,
+                clearcoat: 0.28,
+                clearcoatRoughness: 0.35,
+                sheen: 0.3,
+                sheenRoughness: 0.6,
+                sheenColor: new THREE.Color(0xe07850)
+            }),
+
+            terracottaGlaze: new THREE.MeshPhysicalMaterial({
+                color: 0xe05a36,
+                metalness: 0.12,
+                roughness: 0.15,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.06,
+                emissive: 0x5a1a08,
+                emissiveIntensity: 0.6,
+                iridescence: 0.1,
+                iridescenceIOR: 1.6
+            }),
+
+            sageBotanical: new THREE.MeshPhysicalMaterial({
+                color: 0x8ab17d,
+                metalness: 0.08,
+                roughness: 0.25,
+                clearcoat: 0.75,
+                clearcoatRoughness: 0.15,
+                emissive: 0x1a3818,
+                emissiveIntensity: 0.5,
+                sheen: 0.3,
+                sheenRoughness: 0.4,
+                sheenColor: new THREE.Color(0xb8e0a8)
+            }),
+
+            saffronLuminous: new THREE.MeshPhysicalMaterial({
+                color: 0xf4a261,
+                metalness: 0.15,
+                roughness: 0.1,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.04,
+                emissive: 0xe08830,
+                emissiveIntensity: 0.85,
+                iridescence: 0.25,
+                iridescenceIOR: 2.2,
+                sheen: 0.5,
+                sheenRoughness: 0.2,
+                sheenColor: new THREE.Color(0xffd090)
+            }),
+
+            obsidianTech: new THREE.MeshPhysicalMaterial({
+                color: 0x121816,
+                metalness: 0.6,
+                roughness: 0.2,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.08,
+                sheen: 0.15,
+                sheenRoughness: 0.3,
+                sheenColor: new THREE.Color(0x354840)
+            }),
+
+            wireframeAccent: new THREE.MeshBasicMaterial({
+                color: 0xf4a261,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.10
+            }),
+
+            // NEW: Glowing emissive material for energy cores & halos
+            energyGlow: new THREE.MeshPhysicalMaterial({
+                color: 0xffc878,
+                metalness: 0.0,
+                roughness: 0.0,
+                emissive: 0xf4a261,
+                emissiveIntensity: 2.0,
+                transparent: true,
+                opacity: 0.75,
+                clearcoat: 0.0
+            }),
+
+            // NEW: Glass/crystal material for decorative elements
+            crystalGlass: new THREE.MeshPhysicalMaterial({
+                color: 0xe8ddd0,
+                metalness: 0.0,
+                roughness: 0.0,
+                transmission: 0.88,
+                thickness: 0.6,
+                ior: 1.52,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.02,
+                iridescence: 0.4,
+                iridescenceIOR: 1.8
+            }),
+
+            // NEW: Deep ruby for accent elements
+            rubyAccent: new THREE.MeshPhysicalMaterial({
+                color: 0xaa2244,
+                metalness: 0.1,
+                roughness: 0.12,
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.04,
+                emissive: 0x440818,
+                emissiveIntensity: 0.6,
+                iridescence: 0.3,
+                iridescenceIOR: 2.0
+            })
+        };
+
+        // ============================
+        // 3D SCENE CONSTRUCTION
+        // ============================
+        const masterGroup = new THREE.Group();
+        scene.add(masterGroup);
+
+        // === 1. CERAMIC PRESENTATION PLATTER ===
+        const platterGroup = new THREE.Group();
+        masterGroup.add(platterGroup);
+
+        const platterPoints = [
+            new THREE.Vector2(0.0, -0.20),
+            new THREE.Vector2(1.45, -0.20),
+            new THREE.Vector2(1.65, -0.12),
+            new THREE.Vector2(2.28, -0.02),
+            new THREE.Vector2(2.46, 0.10),
+            new THREE.Vector2(2.40, 0.15),
+            new THREE.Vector2(1.98, 0.04),
+            new THREE.Vector2(1.42, -0.06),
+            new THREE.Vector2(0.0, -0.06)
+        ];
+        const platterGeo = new THREE.LatheGeometry(platterPoints, 96);
+        const platterMesh = new THREE.Mesh(platterGeo, materials.darkCeramic);
+        platterMesh.castShadow = true;
+        platterMesh.receiveShadow = true;
+        platterGroup.add(platterMesh);
+
+        // Inner stoneware plate inlay
+        const innerPlateGeo = new THREE.CylinderGeometry(1.55, 1.44, 0.05, 80);
+        const innerPlateMesh = new THREE.Mesh(innerPlateGeo, materials.creamStoneware);
+        innerPlateMesh.position.y = -0.02;
+        innerPlateMesh.receiveShadow = true;
+        platterGroup.add(innerPlateMesh);
+
+        // Brass rim accent ring
+        const platterRimGeo = new THREE.TorusGeometry(2.42, 0.025, 32, 128);
+        const platterRimMesh = new THREE.Mesh(platterRimGeo, materials.brassGold);
+        platterRimMesh.rotation.x = Math.PI / 2;
+        platterRimMesh.position.y = 0.11;
+        platterGroup.add(platterRimMesh);
+
+        // NEW: Inner decorative ring — ruby accent
+        const innerDecorRing = new THREE.Mesh(
+            new THREE.TorusGeometry(1.85, 0.015, 24, 96),
+            materials.rubyAccent
+        );
+        innerDecorRing.rotation.x = Math.PI / 2;
+        innerDecorRing.position.y = 0.06;
+        platterGroup.add(innerDecorRing);
+
+        // NEW: Subtle glow disc under the plate
+        const glowDisc = new THREE.Mesh(
+            new THREE.CircleGeometry(2.5, 64),
+            new THREE.MeshBasicMaterial({
+                color: 0xe05a36,
+                transparent: true,
+                opacity: 0.06,
+                side: THREE.DoubleSide
+            })
+        );
+        glowDisc.rotation.x = -Math.PI / 2;
+        glowDisc.position.y = -0.22;
+        platterGroup.add(glowDisc);
+
+        // === 2. RESTAURANT CLOCHE (DOME) ===
+        const clocheGroup = new THREE.Group();
+        clocheGroup.position.y = 0.06;
+        masterGroup.add(clocheGroup);
+
+        const clochePoints = [];
+        const domeRadius = 1.95;
+        clochePoints.push(new THREE.Vector2(2.08, 0.0));
+        clochePoints.push(new THREE.Vector2(1.97, 0.05));
+        clochePoints.push(new THREE.Vector2(1.95, 0.15));
+        for (let i = 0; i <= 40; i++) {
+            const theta = (i / 40) * (Math.PI / 2);
+            const r = Math.cos(theta) * domeRadius;
+            const y = 0.15 + Math.sin(theta) * (domeRadius * 0.86);
+            clochePoints.push(new THREE.Vector2(r, y));
+        }
+        const clocheGeo = new THREE.LatheGeometry(clochePoints, 96);
+        materials.brushedCopper.side = THREE.DoubleSide;
+        const clocheDomeMesh = new THREE.Mesh(clocheGeo, materials.brushedCopper);
+        clocheDomeMesh.castShadow = true;
+        clocheGroup.add(clocheDomeMesh);
+
+        // Wireframe overlay
+        const clocheWireMesh = new THREE.Mesh(clocheGeo, materials.wireframeAccent);
+        clocheWireMesh.scale.setScalar(1.004);
+        clocheGroup.add(clocheWireMesh);
+
+        // Crown collar
+        const crownCollarGeo = new THREE.CylinderGeometry(0.34, 0.48, 0.14, 64);
+        const crownCollar = new THREE.Mesh(crownCollarGeo, materials.darkCeramic);
+        crownCollar.position.y = 1.80;
+        clocheGroup.add(crownCollar);
+
+        // Handle torus
+        const handleTorusGeo = new THREE.TorusGeometry(0.26, 0.05, 32, 72);
+        const handleTorus = new THREE.Mesh(handleTorusGeo, materials.brassGold);
+        handleTorus.position.y = 2.02;
+        clocheGroup.add(handleTorus);
+
+        // Handle inner sphere — now with glow
+        const handleInnerSphere = new THREE.Mesh(
+            new THREE.SphereGeometry(0.10, 32, 32),
+            materials.energyGlow
+        );
+        handleInnerSphere.position.y = 2.02;
+        clocheGroup.add(handleInnerSphere);
+
+        // NEW: Crystal decorative finial on top
+        const finialGeo = new THREE.OctahedronGeometry(0.08, 2);
+        const finial = new THREE.Mesh(finialGeo, materials.crystalGlass);
+        finial.position.y = 2.28;
+        clocheGroup.add(finial);
+
+        // === 3. GOURMET CULINARY ELEMENTS ===
+        const culinaryCoreGroup = new THREE.Group();
+        culinaryCoreGroup.position.y = 0.08;
+        masterGroup.add(culinaryCoreGroup);
+
+        // Artisanal reduction ring
+        const reductionRing = new THREE.Mesh(
+            new THREE.TorusGeometry(0.9, 0.06, 32, 96),
+            materials.terracottaGlaze
+        );
+        reductionRing.rotation.x = Math.PI / 2;
+        reductionRing.position.y = 0.04;
+        culinaryCoreGroup.add(reductionRing);
+
+        // Center medallion stack
+        const medallionBase = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.58, 0.60, 0.26, 64),
+            materials.terracottaClay
+        );
+        medallionBase.position.y = 0.15;
+        medallionBase.castShadow = true;
+        culinaryCoreGroup.add(medallionBase);
+
+        const medallionTop = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.44, 0.48, 0.16, 64),
+            materials.creamStoneware
+        );
+        medallionTop.position.y = 0.32;
+        culinaryCoreGroup.add(medallionTop);
+
+        // NEW: Ruby garnish crown on top of medallion
+        const rubyGarnish = new THREE.Mesh(
+            new THREE.TorusGeometry(0.35, 0.025, 20, 60),
+            materials.rubyAccent
+        );
+        rubyGarnish.rotation.x = Math.PI / 2;
+        rubyGarnish.position.y = 0.42;
+        culinaryCoreGroup.add(rubyGarnish);
+
+        // Floating culinary elements
+        const floatingIngredients = [];
+        const ingredientConfigs = [
+            { radius: 0.18, mat: materials.saffronLuminous, home: new THREE.Vector3(0.25, 0.50, 0.18), explode: new THREE.Vector3(1.2, 1.5, 0.9), type: 'sphere' },
+            { radius: 0.15, mat: materials.terracottaGlaze, home: new THREE.Vector3(-0.35, 0.42, 0.22), explode: new THREE.Vector3(-1.4, 1.2, 1.0), type: 'sphere' },
+            { radius: 0.12, mat: materials.saffronLuminous, home: new THREE.Vector3(0.05, 0.52, -0.30), explode: new THREE.Vector3(0.45, 1.8, -1.2), type: 'sphere' },
+            { radius: 0.10, mat: materials.rubyAccent, home: new THREE.Vector3(0.40, 0.40, -0.20), explode: new THREE.Vector3(1.5, 1.0, -0.9), type: 'sphere' },
+            { radius: 0.24, mat: materials.sageBotanical, home: new THREE.Vector3(-0.20, 0.48, -0.15), explode: new THREE.Vector3(-1.0, 1.6, -0.9), type: 'leaf' },
+            { radius: 0.22, mat: materials.sageBotanical, home: new THREE.Vector3(0.38, 0.38, -0.12), explode: new THREE.Vector3(1.4, 1.0, -0.8), type: 'leaf' },
+            { radius: 0.20, mat: materials.brassGold, home: new THREE.Vector3(0.0, 0.60, 0.0), explode: new THREE.Vector3(0.0, 2.0, 0.4), type: 'torus' },
+            { radius: 0.08, mat: materials.crystalGlass, home: new THREE.Vector3(-0.15, 0.55, 0.25), explode: new THREE.Vector3(-0.8, 1.9, 1.1), type: 'crystal' },
+            { radius: 0.07, mat: materials.crystalGlass, home: new THREE.Vector3(0.20, 0.58, -0.10), explode: new THREE.Vector3(0.9, 2.1, -0.5), type: 'crystal' }
+        ];
+
+        ingredientConfigs.forEach((cfg, idx) => {
+            let mesh;
+            if (cfg.type === 'sphere') {
+                mesh = new THREE.Mesh(new THREE.SphereGeometry(cfg.radius, 40, 40), cfg.mat);
+            } else if (cfg.type === 'leaf') {
+                const leafGeo = new THREE.SphereGeometry(cfg.radius, 32, 32);
+                leafGeo.scale(1.7, 0.25, 0.6);
+                mesh = new THREE.Mesh(leafGeo, cfg.mat);
+            } else if (cfg.type === 'crystal') {
+                mesh = new THREE.Mesh(new THREE.OctahedronGeometry(cfg.radius, 1), cfg.mat);
+            } else {
+                mesh = new THREE.Mesh(new THREE.TorusGeometry(cfg.radius, 0.04, 24, 56), cfg.mat);
+            }
+            mesh.position.copy(cfg.home);
+            mesh.castShadow = true;
+            mesh.userData = {
+                home: cfg.home.clone(),
+                explode: cfg.explode.clone(),
+                phase: idx * 1.15
+            };
+            culinaryCoreGroup.add(mesh);
+            floatingIngredients.push(mesh);
+        });
+
+        // === 4. TRADITIONAL CAZUELA ===
+        const cazuelaGroup = new THREE.Group();
+        cazuelaGroup.position.set(-2.6, 0.3, -0.6);
+        masterGroup.add(cazuelaGroup);
+
+        const cazuelaPoints = [
+            new THREE.Vector2(0.0, -0.40),
+            new THREE.Vector2(0.70, -0.40),
+            new THREE.Vector2(0.98, -0.14),
+            new THREE.Vector2(1.10, 0.28),
+            new THREE.Vector2(1.16, 0.36),
+            new THREE.Vector2(1.04, 0.40),
+            new THREE.Vector2(0.95, 0.26),
+            new THREE.Vector2(0.82, -0.08),
+            new THREE.Vector2(0.58, -0.28),
+            new THREE.Vector2(0.0, -0.28)
+        ];
+        const cazuelaGeo = new THREE.LatheGeometry(cazuelaPoints, 72);
+        const cazuelaBody = new THREE.Mesh(cazuelaGeo, materials.terracottaClay);
+        cazuelaBody.castShadow = true;
+        cazuelaGroup.add(cazuelaBody);
+
+        // Cream slip band
+        const cazuelaBand = new THREE.Mesh(
+            new THREE.TorusGeometry(1.08, 0.032, 20, 80),
+            materials.creamStoneware
+        );
+        cazuelaBand.rotation.x = Math.PI / 2;
+        cazuelaBand.position.y = 0.24;
+        cazuelaGroup.add(cazuelaBand);
+
+        // Handles (orejas)
+        [-1, 1].forEach((dir) => {
+            const earHandle = new THREE.Mesh(
+                new THREE.TorusGeometry(0.24, 0.05, 20, 40),
+                materials.terracottaClay
+            );
+            earHandle.position.set(dir * 1.08, 0.26, 0);
+            earHandle.rotation.z = dir * 0.45;
+            earHandle.rotation.x = Math.PI / 2;
+            cazuelaGroup.add(earHandle);
+        });
+
+        // Stew surface — enhanced glow
+        const stewSurface = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.90, 0.80, 0.09, 64),
+            materials.terracottaGlaze
+        );
+        stewSurface.position.y = 0.14;
+        cazuelaGroup.add(stewSurface);
+
+        // Garnish ring
+        const cazuelaGarnish = new THREE.Mesh(
+            new THREE.TorusGeometry(0.40, 0.04, 20, 56),
+            materials.sageBotanical
+        );
+        cazuelaGarnish.rotation.x = Math.PI / 2;
+        cazuelaGarnish.position.y = 0.20;
+        cazuelaGroup.add(cazuelaGarnish);
+
+        // NEW: Steam effect — tiny floating spheres rising from cazuela
+        const steamParticles = [];
+        for (let i = 0; i < 8; i++) {
+            const steamBall = new THREE.Mesh(
+                new THREE.SphereGeometry(0.04 + Math.random() * 0.03, 12, 12),
+                new THREE.MeshPhysicalMaterial({
+                    color: 0xfff5e6,
+                    transparent: true,
+                    opacity: 0.2,
+                    emissive: 0xf4a261,
+                    emissiveIntensity: 0.4,
+                    roughness: 1.0,
+                    metalness: 0.0
+                })
+            );
+            steamBall.position.set(
+                (Math.random() - 0.5) * 0.6,
+                0.3 + Math.random() * 0.5,
+                (Math.random() - 0.5) * 0.6
+            );
+            steamBall.userData.baseY = steamBall.position.y;
+            steamBall.userData.phase = Math.random() * Math.PI * 2;
+            steamBall.userData.speed = 0.3 + Math.random() * 0.4;
+            cazuelaGroup.add(steamBall);
+            steamParticles.push(steamBall);
+        }
+
+        // === 5. RESCUE VESSEL ===
+        const rescueVesselGroup = new THREE.Group();
+        rescueVesselGroup.position.set(2.6, -0.2, 0.5);
+        masterGroup.add(rescueVesselGroup);
+
+        const capsuleBaseGeo = new THREE.CylinderGeometry(0.95, 0.85, 0.60, 8);
+        const capsuleBase = new THREE.Mesh(capsuleBaseGeo, materials.obsidianTech);
+        capsuleBase.castShadow = true;
+        rescueVesselGroup.add(capsuleBase);
+
+        const thermalCore = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.78, 0.72, 0.44, 40),
+            materials.saffronLuminous
+        );
+        thermalCore.position.y = 0.09;
+        rescueVesselGroup.add(thermalCore);
+
+        // NEW: Inner energy core glow ring
+        const innerCoreRing = new THREE.Mesh(
+            new THREE.TorusGeometry(0.55, 0.02, 16, 48),
+            materials.energyGlow
+        );
+        innerCoreRing.rotation.x = Math.PI / 2;
+        innerCoreRing.position.y = 0.32;
+        rescueVesselGroup.add(innerCoreRing);
+
+        // Articulated lids
+        const leftLidPivot = new THREE.Group();
+        leftLidPivot.position.set(-0.88, 0.32, 0);
+        rescueVesselGroup.add(leftLidPivot);
+
+        const leftLidMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.88, 0.09, 1.30),
+            materials.creamStoneware
+        );
+        leftLidMesh.position.set(0.44, 0, 0);
+        leftLidPivot.add(leftLidMesh);
+
+        const rightLidPivot = new THREE.Group();
+        rightLidPivot.position.set(0.88, 0.32, 0);
+        rescueVesselGroup.add(rightLidPivot);
+
+        const rightLidMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.88, 0.09, 1.30),
+            materials.creamStoneware
+        );
+        rightLidMesh.position.set(-0.44, 0, 0);
+        rightLidPivot.add(rightLidMesh);
+
+        // Strap ring
+        const strapRing = new THREE.Mesh(
+            new THREE.TorusGeometry(0.99, 0.035, 20, 72),
+            materials.sageBotanical
+        );
+        strapRing.rotation.x = Math.PI / 2;
+        rescueVesselGroup.add(strapRing);
+
+        // === 6. ORBITAL NETWORK HALOS ===
+        const haloGroup = new THREE.Group();
+        masterGroup.add(haloGroup);
+
+        const primaryHaloRing = new THREE.Mesh(
+            new THREE.TorusGeometry(3.40, 0.022, 20, 160),
+            materials.brassGold
+        );
+        primaryHaloRing.rotation.x = Math.PI / 2.3;
+        haloGroup.add(primaryHaloRing);
+
+        const secondaryHaloRing = new THREE.Mesh(
+            new THREE.TorusGeometry(3.90, 0.015, 20, 160),
+            materials.terracottaGlaze
+        );
+        secondaryHaloRing.rotation.x = -Math.PI / 3.1;
+        secondaryHaloRing.rotation.y = Math.PI / 5;
+        haloGroup.add(secondaryHaloRing);
+
+        const outerSageRing = new THREE.Mesh(
+            new THREE.TorusGeometry(4.50, 0.012, 20, 160),
+            materials.sageBotanical
+        );
+        outerSageRing.rotation.x = Math.PI / 1.9;
+        haloGroup.add(outerSageRing);
+
+        // NEW: Extra ruby inner ring
+        const innerRubyRing = new THREE.Mesh(
+            new THREE.TorusGeometry(2.80, 0.010, 16, 128),
+            materials.rubyAccent
+        );
+        innerRubyRing.rotation.x = Math.PI / 2.8;
+        innerRubyRing.rotation.z = Math.PI / 7;
+        haloGroup.add(innerRubyRing);
+
+        // Orbital nodes
+        const orbitalNodes = [];
+        for (let i = 0; i < 10; i++) {
+            const angle = (i / 10) * Math.PI * 2;
+            const nodeGroup = new THREE.Group();
+            const isMajor = i % 2 === 0;
+            const nodeMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(isMajor ? 0.10 : 0.06, 24, 24),
+                isMajor ? materials.saffronLuminous : materials.sageBotanical
+            );
+            nodeGroup.add(nodeMesh);
+
+            if (isMajor) {
+                const nodeHalo = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.18, 0.012, 16, 40),
+                    materials.brassGold
+                );
+                nodeGroup.add(nodeHalo);
+
+                // NEW: Glow ring around major nodes
+                const nodeGlow = new THREE.Mesh(
+                    new THREE.RingGeometry(0.12, 0.22, 32),
+                    new THREE.MeshBasicMaterial({
+                        color: 0xf4a261,
+                        transparent: true,
+                        opacity: 0.15,
+                        side: THREE.DoubleSide
+                    })
+                );
+                nodeGroup.add(nodeGlow);
+            }
+
+            nodeGroup.position.set(
+                Math.cos(angle) * 3.40,
+                Math.sin(angle) * 3.40,
+                0
+            );
+            primaryHaloRing.add(nodeGroup);
+            orbitalNodes.push(nodeGroup);
+        }
+
+        // === 7. SATELLITES & PARTICLES ===
+        const satellitesGroup = new THREE.Group();
+        scene.add(satellitesGroup);
+
+        const satelliteMeshes = [];
+        for (let i = 0; i < 18; i++) {
+            const angle = (i / 18) * Math.PI * 2;
+            const radius = 4.8 + (i % 4) * 1.3;
+            const ySpread = (Math.sin(i * 2.3) * 3.5);
+
+            let geo, mat;
+            const typeIdx = i % 4;
+            if (typeIdx === 0) {
+                geo = new THREE.CylinderGeometry(0.30, 0.20, 0.07, 28);
+                mat = materials.darkCeramic;
+            } else if (typeIdx === 1) {
+                geo = new THREE.OctahedronGeometry(0.15, 2);
+                mat = materials.terracottaGlaze;
+            } else if (typeIdx === 2) {
+                geo = new THREE.TorusGeometry(0.20, 0.028, 16, 36);
+                mat = materials.brassGold;
+            } else {
+                geo = new THREE.OctahedronGeometry(0.10, 1);
+                mat = materials.crystalGlass;
+            }
+
+            const sat = new THREE.Mesh(geo, mat);
+            sat.position.set(Math.cos(angle) * radius, ySpread, Math.sin(angle) * radius - 1.5);
+            sat.rotation.set(i * 0.5, i * 0.8, 0);
+            sat.userData = {
+                basePos: sat.position.clone(),
+                speed: 0.4 + (i % 5) * 0.15,
+                phase: i * 0.9
+            };
+            satellitesGroup.add(sat);
+            satelliteMeshes.push(sat);
+        }
+
+        // ENHANCED PARTICLES — More count, varied sizes, with additive glow
+        const particleCount = 500;
+        const particleGeo = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+
+        const paletteColors = [
+            new THREE.Color(0xe05a36),
+            new THREE.Color(0xf4a261),
+            new THREE.Color(0x8ab17d),
+            new THREE.Color(0xf5f2eb),
+            new THREE.Color(0xaa2244),
+            new THREE.Color(0xffd090)
+        ];
+
+        for (let i = 0; i < particleCount; i++) {
+            positions[i * 3] = (Math.random() - 0.5) * 26;
+            positions[i * 3 + 1] = (Math.random() - 0.5) * 18;
+            positions[i * 3 + 2] = (Math.random() - 0.5) * 16 - 2;
+
+            const c = paletteColors[i % paletteColors.length];
+            colors[i * 3] = c.r;
+            colors[i * 3 + 1] = c.g;
+            colors[i * 3 + 2] = c.b;
+
+            sizes[i] = 0.02 + Math.random() * 0.05;
+        }
+
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const particleMat = new THREE.PointsMaterial({
+            size: 0.05,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.7,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+
+        const particleSystem = new THREE.Points(particleGeo, particleMat);
+        scene.add(particleSystem);
+
+        // NEW: Second particle layer — larger, dimmer, for depth
+        const dustCount = 120;
+        const dustGeo = new THREE.BufferGeometry();
+        const dustPositions = new Float32Array(dustCount * 3);
+        const dustColors = new Float32Array(dustCount * 3);
+        for (let i = 0; i < dustCount; i++) {
+            dustPositions[i * 3] = (Math.random() - 0.5) * 30;
+            dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 22;
+            dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 18 - 3;
+            const c = paletteColors[Math.floor(Math.random() * paletteColors.length)];
+            dustColors[i * 3] = c.r * 0.5;
+            dustColors[i * 3 + 1] = c.g * 0.5;
+            dustColors[i * 3 + 2] = c.b * 0.5;
+        }
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+        dustGeo.setAttribute('color', new THREE.BufferAttribute(dustColors, 3));
+        const dustMat = new THREE.PointsMaterial({
+            size: 0.09,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.3,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true
+        });
+        const dustSystem = new THREE.Points(dustGeo, dustMat);
+        scene.add(dustSystem);
+
+        // ============================
+        // HUD DOM REFERENCES
+        // ============================
+        const hudStageIndex = document.getElementById('hud-stage-index');
+        const hudRotY = document.getElementById('hud-roty');
+        const hudLift = document.getElementById('hud-lift');
+        const hudScrollBar = document.getElementById('hud-scroll-bar');
+        const stageNavBtns = document.querySelectorAll('.stage-nav-btn');
+
+        function updateScrollTarget() {
+            const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+            state.targetScroll = Math.max(0, Math.min(1, window.scrollY / maxScroll));
+        }
+
+        window.addEventListener('scroll', updateScrollTarget, { passive: true });
+        updateScrollTarget();
+
+        window.scrollToStage = function(normalizedProgress) {
+            if (state.inspectMode) toggleInspectMode();
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            window.scrollTo({ top: maxScroll * normalizedProgress, behavior: 'smooth' });
+        };
+
+        function updateHUD(s) {
+            const pct = (s * 100).toFixed(1);
+            hudScrollBar.style.width = `${pct}%`;
+
+            let activeStage = 0;
+            if (s < 0.25) activeStage = 0;
+            else if (s < 0.55) activeStage = 1;
+            else if (s < 0.85) activeStage = 2;
+            else activeStage = 3;
+
+            hudStageIndex.textContent = `0${activeStage + 1} / 04`;
+
+            stageNavBtns.forEach((btn, idx) => {
+                if (idx === activeStage) {
+                    btn.className = 'stage-nav-btn px-4 py-1.5 rounded-full font-mono text-xs tracking-wider transition-all duration-300 bg-terracotta text-obsidian font-medium';
+                } else {
+                    btn.className = 'stage-nav-btn px-4 py-1.5 rounded-full font-mono text-xs tracking-wider text-cream/70 hover:text-cream transition-all duration-300';
+                }
+            });
+        }
+
+        // ============================
+        // LIGHTING MOOD SYSTEM (Enhanced with bloom adjustments)
+        // ============================
+        window.setLightingMood = function(mood) {
+            state.currentMood = mood;
+            const moods = ['terracotta', 'emerald', 'studio'];
+            moods.forEach(m => {
+                const btn = document.getElementById(`mood-${m}`);
+                if (!btn) return;
+                if (m === mood) {
+                    btn.className = 'mood-btn px-3 py-1.5 rounded-full font-mono text-[10px] tracking-widest uppercase transition-all bg-terracotta/25 text-saffron border border-terracotta/40';
+                } else {
+                    btn.className = 'mood-btn px-3 py-1.5 rounded-full font-mono text-[10px] tracking-widest uppercase text-cream/60 hover:text-cream transition-all border border-transparent';
+                }
+            });
+
+            if (mood === 'terracotta') {
+                rimLightTerracotta.color.setHex(0xe05a36);
+                rimLightTerracotta.intensity = 5.0;
+                fillLightSage.color.setHex(0x8ab17d);
+                fillLightSage.intensity = 3.0;
+                keyLight.color.setHex(0xfff0dd);
+                backLight.color.setHex(0x4a6fa5);
+                bloomPass.strength = 0.55;
+            } else if (mood === 'emerald') {
+                rimLightTerracotta.color.setHex(0x52b788);
+                rimLightTerracotta.intensity = 5.5;
+                fillLightSage.color.setHex(0xf4a261);
+                fillLightSage.intensity = 3.5;
+                keyLight.color.setHex(0xd8f3dc);
+                backLight.color.setHex(0x2d6a4f);
+                bloomPass.strength = 0.65;
+            } else if (mood === 'studio') {
+                rimLightTerracotta.color.setHex(0xffffff);
+                rimLightTerracotta.intensity = 4.0;
+                fillLightSage.color.setHex(0xd8d2c5);
+                fillLightSage.intensity = 3.5;
+                keyLight.color.setHex(0xffffff);
+                backLight.color.setHex(0x8899aa);
+                bloomPass.strength = 0.45;
+            }
+        };
+
+        // ============================
+        // INSPECT MODE TOGGLE
+        // ============================
+        window.toggleInspectMode = function() {
+            state.inspectMode = !state.inspectMode;
+            const body = document.body;
+            const panel = document.getElementById('inspect-hud-panel');
+            const label = document.getElementById('inspect-btn-label');
+            const dot = document.getElementById('inspect-status-dot');
+
+            if (state.inspectMode) {
+                body.classList.add('inspect-mode');
+                panel.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-[-12px]');
+                panel.classList.add('opacity-100', 'pointer-events-auto', 'translate-y-0');
+                label.textContent = 'VISTA EDITORIAL';
+                dot.classList.replace('bg-sage', 'bg-terracotta');
+                state.manualRotY = masterGroup.rotation.y;
+                state.manualRotX = masterGroup.rotation.x;
+            } else {
+                body.classList.remove('inspect-mode');
+                panel.classList.add('opacity-0', 'pointer-events-none', 'translate-y-[-12px]');
+                panel.classList.remove('opacity-100', 'pointer-events-auto', 'translate-y-0');
+                label.textContent = 'INSPECCION 3D';
+                dot.classList.replace('bg-terracotta', 'bg-sage');
+            }
+        };
+
+        const explodeSlider = document.getElementById('manual-explode-slider');
+        explodeSlider.addEventListener('input', (e) => {
+            state.manualExplode = parseFloat(e.target.value);
+        });
+
+        // ============================
+        // INPUT HANDLING
+        // ============================
+        window.addEventListener('mousemove', (e) => {
+            state.targetMouseX = (e.clientX / window.innerWidth) * 2 - 1;
+            state.targetMouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+
+            if (state.inspectMode && state.isDragging) {
+                const dx = e.clientX - state.prevPointerX;
+                const dy = e.clientY - state.prevPointerY;
+                state.manualRotY += dx * 0.008;
+                state.manualRotX = Math.max(-0.8, Math.min(0.8, state.manualRotX + dy * 0.008));
+                state.prevPointerX = e.clientX;
+                state.prevPointerY = e.clientY;
+            }
+        });
+
+        container.addEventListener('mousedown', (e) => {
+            if (!state.inspectMode) return;
+            state.isDragging = true;
+            state.prevPointerX = e.clientX;
+            state.prevPointerY = e.clientY;
+        });
+
+        window.addEventListener('mouseup', () => { state.isDragging = false; });
+
+        container.addEventListener('touchstart', (e) => {
+            if (!state.inspectMode || e.touches.length === 0) return;
+            state.isDragging = true;
+            state.prevPointerX = e.touches[0].clientX;
+            state.prevPointerY = e.touches[0].clientY;
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 0) return;
+            const touch = e.touches[0];
+            state.targetMouseX = (touch.clientX / window.innerWidth) * 2 - 1;
+            state.targetMouseY = -(touch.clientY / window.innerHeight) * 2 + 1;
+
+            if (state.inspectMode && state.isDragging) {
+                const dx = touch.clientX - state.prevPointerX;
+                const dy = touch.clientY - state.prevPointerY;
+                state.manualRotY += dx * 0.008;
+                state.manualRotX = Math.max(-0.8, Math.min(0.8, state.manualRotX + dy * 0.008));
+                state.prevPointerX = touch.clientX;
+                state.prevPointerY = touch.clientY;
+            }
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => { state.isDragging = false; });
+
+        // ============================
+        // MODAL
+        // ============================
+        window.openJoinModal = function() {
+            const modal = document.getElementById('join-modal');
+            const card = document.getElementById('join-modal-card');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.add('opacity-100', 'pointer-events-auto');
+            card.classList.replace('scale-95', 'scale-100');
+        };
+
+        window.closeJoinModal = function() {
+            const modal = document.getElementById('join-modal');
+            const card = document.getElementById('join-modal-card');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            modal.classList.remove('opacity-100', 'pointer-events-auto');
+            card.classList.replace('scale-100', 'scale-95');
+        };
+
+        window.handleFormSubmit = function(e) {
+            e.preventDefault();
+            const feedback = document.getElementById('form-feedback');
+            feedback.classList.remove('hidden');
+            setTimeout(() => {
+                feedback.classList.add('hidden');
+                e.target.reset();
+                closeJoinModal();
+            }, 2400);
+        };
+
+        // ============================
+        // ANIMATION LOOP
+        // ============================
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = state.clock.getElapsedTime();
+
+            // Smooth lerp
+            state.currentScroll = lerp(state.currentScroll, state.targetScroll, 0.065);
+            state.scrollVelocity = Math.abs(state.targetScroll - state.currentScroll);
+            state.mouseX = lerp(state.mouseX, state.targetMouseX, 0.06);
+            state.mouseY = lerp(state.mouseY, state.targetMouseY, 0.06);
+
+            const s = state.currentScroll;
+            updateHUD(s);
+
+            // Stage weights
+            const stage2Weight = smoothstep(0.12, 0.45, s);
+            const stage3Weight = smoothstep(0.45, 0.76, s);
+            const stage4Weight = smoothstep(0.76, 0.96, s);
+
+            const explodeFactor = state.inspectMode
+                ? state.manualExplode
+                : (stage2Weight * (1 - stage4Weight * 0.45));
+
+            // === MASTER GROUP ROTATION ===
+            if (state.inspectMode) {
+                masterGroup.rotation.y = lerp(masterGroup.rotation.y, state.manualRotY, 0.12);
+                masterGroup.rotation.x = lerp(masterGroup.rotation.x, state.manualRotX, 0.12);
+                masterGroup.rotation.z = lerp(masterGroup.rotation.z, 0, 0.1);
+                camera.position.x = lerp(camera.position.x, 0, 0.06);
+                camera.position.y = lerp(camera.position.y, 1.1, 0.06);
+                camera.position.z = lerp(camera.position.z, 8.0, 0.06);
+            } else {
+                const targetRotY = s * Math.PI * 2.6 + elapsedTime * 0.14 + state.mouseX * 0.35;
+                const targetRotX = 0.14 + Math.sin(s * Math.PI * 2) * 0.24 - state.mouseY * 0.24;
+                const targetRotZ = Math.sin(s * Math.PI) * 0.14;
+
+                masterGroup.rotation.y = targetRotY;
+                masterGroup.rotation.x = targetRotX;
+                masterGroup.rotation.z = targetRotZ;
+
+                const camX = Math.sin(s * Math.PI * 2) * 0.7 + state.mouseX * 0.5;
+                const camY = 1.35 - stage2Weight * 0.5 + stage3Weight * 0.6 + state.mouseY * 0.4;
+                const camZ = 9.2 - stage2Weight * 1.2 + stage3Weight * 0.4 - stage4Weight * 0.6;
+
+                camera.position.set(camX, camY, camZ);
+            }
+            camera.lookAt(0, 0.25, 0);
+
+            // === CLOCHE CHOREOGRAPHY ===
+            const hoverBreathing = Math.sin(elapsedTime * 1.6) * 0.1 + 0.14;
+            const clocheLiftY = hoverBreathing + explodeFactor * 2.3 + stage3Weight * 0.5;
+            clocheGroup.position.y = clocheLiftY;
+            clocheGroup.rotation.z = explodeFactor * -0.4 * (1 - stage4Weight * 0.6);
+            clocheGroup.rotation.x = explodeFactor * 0.3;
+            clocheGroup.rotation.y = -elapsedTime * 0.22;
+
+            // Finial spin
+            finial.rotation.y = elapsedTime * 2.0;
+            finial.rotation.x = Math.sin(elapsedTime * 1.5) * 0.3;
+
+            // === PLATTER & INGREDIENTS ===
+            platterGroup.position.y = -explodeFactor * 1.0 + Math.cos(elapsedTime * 1.4) * 0.05;
+            platterGroup.rotation.z = explodeFactor * 0.15;
+
+            // Glow disc pulse
+            glowDisc.material.opacity = 0.04 + Math.sin(elapsedTime * 2.0) * 0.03;
+
+            floatingIngredients.forEach((item) => {
+                const targetPos = new THREE.Vector3().lerpVectors(
+                    item.userData.home,
+                    item.userData.explode,
+                    explodeFactor
+                );
+                item.position.copy(targetPos);
+                item.position.y += Math.sin(elapsedTime * 2.0 + item.userData.phase) * 0.11;
+                item.rotation.x = elapsedTime * 0.65 + item.userData.phase;
+                item.rotation.y = elapsedTime * 0.45 + item.userData.phase;
+            });
+
+            // === CAZUELA ===
+            const cazuelaRadius = lerp(3.2, 1.85, stage2Weight) + stage4Weight * 0.45;
+            const cazuelaAngle = elapsedTime * 0.32 + s * Math.PI * 1.5;
+            cazuelaGroup.position.x = Math.cos(cazuelaAngle) * cazuelaRadius;
+            cazuelaGroup.position.z = Math.sin(cazuelaAngle) * cazuelaRadius;
+            cazuelaGroup.position.y = -0.15 + stage2Weight * 0.6 - stage3Weight * 0.35 + Math.sin(elapsedTime * 1.6) * 0.12;
+            cazuelaGroup.rotation.y = -cazuelaAngle + elapsedTime * 0.4;
+            cazuelaGroup.rotation.z = 0.24 * Math.sin(elapsedTime * 1.1);
+            const cazuelaScale = lerp(0.68, 1.12, stage2Weight) * lerp(1.0, 0.88, stage3Weight);
+            cazuelaGroup.scale.setScalar(cazuelaScale);
+
+            // Animate steam particles
+            steamParticles.forEach((sp) => {
+                sp.position.y = sp.userData.baseY + Math.sin(elapsedTime * sp.userData.speed + sp.userData.phase) * 0.15
+                    + ((elapsedTime * sp.userData.speed * 0.3) % 0.8);
+                sp.material.opacity = 0.12 + Math.sin(elapsedTime * sp.userData.speed * 2 + sp.userData.phase) * 0.08;
+                if (sp.position.y > sp.userData.baseY + 0.8) {
+                    sp.position.y = sp.userData.baseY;
+                }
+            });
+
+            // === RESCUE VESSEL ===
+            const vesselRadius = lerp(3.4, 1.75, stage3Weight) + stage4Weight * 0.45;
+            const vesselAngle = cazuelaAngle + Math.PI;
+            rescueVesselGroup.position.x = Math.cos(vesselAngle) * vesselRadius;
+            rescueVesselGroup.position.z = Math.sin(vesselAngle) * vesselRadius;
+            rescueVesselGroup.position.y = -0.3 + stage3Weight * 0.8 + Math.cos(elapsedTime * 1.8) * 0.12;
+            rescueVesselGroup.rotation.y = -vesselAngle + elapsedTime * 0.45;
+            rescueVesselGroup.rotation.x = 0.2 * Math.cos(elapsedTime * 1.3);
+
+            // Inner core glow ring pulsation
+            innerCoreRing.material.emissiveIntensity = 1.5 + Math.sin(elapsedTime * 3.0) * 0.8;
+
+            const lidOpenAngle = Math.max(stage3Weight, explodeFactor * 0.7) * 1.1;
+            leftLidPivot.rotation.z = lidOpenAngle;
+            rightLidPivot.rotation.z = -lidOpenAngle;
+
+            // === ORBITAL HALOS ===
+            primaryHaloRing.rotation.z = elapsedTime * 0.2 + s * Math.PI * 2;
+            secondaryHaloRing.rotation.z = -elapsedTime * 0.28 + s * Math.PI * 3;
+            outerSageRing.rotation.z = elapsedTime * 0.14 - s * Math.PI * 1.5;
+            innerRubyRing.rotation.z = elapsedTime * 0.18 + s * Math.PI * 1.8;
+
+            const haloScale = 1.0 + stage3Weight * 0.14 - stage4Weight * 0.2 + state.scrollVelocity * 0.9;
+            haloGroup.scale.setScalar(haloScale);
+
+            // === SATELLITES & PARTICLES ===
+            satelliteMeshes.forEach((sat) => {
+                sat.position.y = sat.userData.basePos.y + Math.sin(elapsedTime * sat.userData.speed + sat.userData.phase) * 0.45 + s * 2.0;
+                sat.rotation.x += 0.007;
+                sat.rotation.y += 0.011;
+            });
+
+            particleSystem.rotation.y = elapsedTime * 0.035 + s * 1.2;
+            particleSystem.position.y = (s - 0.5) * 2.4;
+
+            dustSystem.rotation.y = -elapsedTime * 0.02 + s * 0.8;
+            dustSystem.position.y = (s - 0.5) * 1.6;
+
+            // === DYNAMIC LIGHTING ANIMATION ===
+            // Gentle breathing on core glow
+            coreGlowLight.intensity = 3.5 + Math.sin(elapsedTime * 1.8) * 0.8;
+            coreGlowLight.position.y = 0.5 + Math.sin(elapsedTime * 1.2) * 0.15;
+
+            // Subtle rim light orbit
+            rimLightTerracotta.position.x = -6 + Math.sin(elapsedTime * 0.5) * 1.2;
+            rimLightTerracotta.position.z = -4 + Math.cos(elapsedTime * 0.4) * 1.0;
+
+            // HUD telemetry
+            hudRotY.textContent = (masterGroup.rotation.y % (Math.PI * 2)).toFixed(2);
+            hudLift.textContent = clocheLiftY.toFixed(2);
+
+            // Render with bloom post-processing
+            composer.render();
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            composer.setSize(window.innerWidth, window.innerHeight);
+            bloomPass.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.onload = function() {
+            updateScrollTarget();
+            animate();
+        };
+    </script>
+</body>
+</html>

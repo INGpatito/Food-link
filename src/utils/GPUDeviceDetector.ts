@@ -25,9 +25,9 @@ export function checkIsHighEndGPU(): boolean {
     // Log for debugging / showing off
     console.log(`[GPU Detector] Hardware Detectado: "${renderer}"`);
     if (isHighEnd) {
-      console.log(`[GPU Detector] Perfil: ULTRA ("Web RTX" Activado) 🚀`);
+      console.log(`[GPU Detector] Perfil: ULTRA ("Web RTX" Activado)`);
     } else {
-      console.log(`[GPU Detector] Perfil: RENDIMIENTO (Pipeline Estándar) ⚡`);
+      console.log(`[GPU Detector] Perfil: RENDIMIENTO (Pipeline Estándar)`);
     }
     
     return isHighEnd;

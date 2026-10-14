@@ -11,8 +11,9 @@ export function initFeaturesSection(container: HTMLElement | null) {
 
       <div class="w-full lg:w-1/2 flex flex-col gap-4 md:gap-6 z-10 pointer-events-auto text-brand-1 mb-auto lg:mb-0">
         
-        <div class="uppercase tracking-widest text-brand-2 text-sm font-bold border-b border-brand-2/30 pb-2 mb-4">
-          Capítulo II &mdash; El Horno
+        <div class="uppercase tracking-widest text-brand-2 text-sm font-bold border-b border-brand-2/30 pb-2 mb-4 flex items-center justify-between">
+          <span>Capítulo II &mdash; El Horno y la Masa Madre</span>
+          <span class="text-[0.68rem] font-normal text-brand-1/60 tracking-normal">Modelo para pizzerías de autor</span>
         </div>
 
         <h2 class="font-display font-bold text-4xl md:text-6xl leading-none uppercase">
@@ -21,22 +22,21 @@ export function initFeaturesSection(container: HTMLElement | null) {
         </h2>
         
         <p class="font-body text-brand-1/80 text-base md:text-lg leading-relaxed mt-2 md:mt-4">
-          Fermentación lenta de 72 horas. Queso fior di latte fresco y tomates San Marzano. 
-          No es solo pizza, es arquitectura en cada rebanada.
+          La idea para las pizzerías artesanales: dar a conocer sus fermentaciones lentas y el origen de sus harinas. Al final de cada turno, los locales podrán habilitar reservas de excedentes a precio preferencial para evitar mermas.
         </p>
 
-        <ul class="flex flex-col gap-3 md:gap-4 mt-5 md:mt-8 font-body text-sm">
-          <li class="flex justify-between items-center border-b border-brand-1/20 pb-2">
-            <span class="font-bold">Margarita Clásica</span>
-            <span class="text-brand-2">$12.00</span>
+        <ul class="flex flex-col gap-3.5 md:gap-5 mt-5 md:mt-7 font-body text-sm">
+          <li class="flex justify-between items-center border-b border-brand-1/15 pb-2.5">
+            <span class="font-medium text-brand-1 text-base">Margarita de Masa Madre</span>
+            <span class="text-xs uppercase tracking-widest text-brand-2">Fermentación 48h · Lote de cierre</span>
           </li>
-          <li class="flex justify-between items-center border-b border-brand-1/20 pb-2">
-            <span class="font-bold">Doble Pepperoni Picante</span>
-            <span class="text-brand-2">$14.50</span>
+          <li class="flex justify-between items-center border-b border-brand-1/15 pb-2.5">
+            <span class="font-medium text-brand-1 text-base">Doble Pepperoni Artesanal</span>
+            <span class="text-xs uppercase tracking-widest text-brand-1/60">Productor local · Hornada diaria</span>
           </li>
-          <li class="flex justify-between items-center border-b border-brand-1/20 pb-2">
-            <span class="font-bold">Trufa & Champiñones</span>
-            <span class="text-brand-2">$16.00</span>
+          <li class="flex justify-between items-center border-b border-brand-1/15 pb-2.5">
+            <span class="font-medium text-brand-1 text-base">Trufa &amp; Setas de Temporada</span>
+            <span class="text-xs uppercase tracking-widest text-brand-1/60">Recolección estacional</span>
           </li>
         </ul>
 

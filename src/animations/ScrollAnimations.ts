@@ -6,7 +6,7 @@ import { SECTION_THEMES } from '../utils/constants';
 
 gsap.registerPlugin(ScrollTrigger);
 
-export type PageSection = 'hero' | 'features' | 'salad' | 'menu' | 'extra' | 'footer';
+export type PageSection = 'hero' | 'features' | 'salad' | 'menu' | 'extra' | 'anatomy' | 'footer';
 
 // ── DNA Helix config por sección ──
 const HELIX_SECTIONS: { id: string; side: 1 | -1 }[] = [
@@ -15,7 +15,8 @@ const HELIX_SECTIONS: { id: string; side: 1 | -1 }[] = [
   { id: '#salad-root',    side: -1 },
   { id: '#menu-root',     side:  1 },
   { id: '#extra-root',    side: -1 },
-  { id: '#footer-root',   side:  1 },
+  { id: '#anatomy-root',  side:  1 },
+  { id: '#footer-root',   side: -1 },
 ];
 
 export class ScrollAnimations {
@@ -45,7 +46,7 @@ export class ScrollAnimations {
     // Cinematic Text Reveal (Staggered)
     const el = document.getElementById(`${section}-root`);
     if (el) {
-      const animatables = el.querySelectorAll('h1, h2, h3, p, ul, .minimal-btn');
+      const animatables = el.querySelectorAll('h1, h2, h3, p, ul, .minimal-btn, .minimal-btn-outline');
       if (animatables.length > 0) {
         gsap.fromTo(animatables,
           { y: 30, opacity: 0 },
@@ -66,7 +67,7 @@ export class ScrollAnimations {
     });
 
     const sectionId = visibleSection?.id.replace('-root', '') as PageSection | undefined;
-    if (!sectionId || !['hero', 'features', 'salad', 'menu', 'extra', 'footer'].includes(sectionId)) return;
+    if (!sectionId || !['hero', 'features', 'salad', 'menu', 'extra', 'anatomy', 'footer'].includes(sectionId)) return;
 
     this.activateSection(sectionId, 0);
   }
@@ -110,7 +111,7 @@ export class ScrollAnimations {
         e.preventDefault();
 
         const sectionKey = href.replace('#', '').replace('-root', '') as PageSection;
-        if (['hero', 'features', 'salad', 'menu', 'extra', 'footer'].includes(sectionKey)) {
+        if (['hero', 'features', 'salad', 'menu', 'extra', 'anatomy', 'footer'].includes(sectionKey)) {
           this.activateSection(sectionKey, 1);
         }
 
@@ -244,6 +245,14 @@ export class ScrollAnimations {
     });
 
     ScrollTrigger.create({
+      trigger: '#anatomy-root',
+      start: 'top 50%',
+      end: 'bottom 50%',
+      onEnter: () => this.activateSection('anatomy', 1),
+      onEnterBack: () => this.activateSection('anatomy', -1),
+    });
+
+    ScrollTrigger.create({
       trigger: '#footer-root',
       start: 'top 50%',
       end: 'bottom bottom',
@@ -304,7 +313,20 @@ export class ScrollAnimations {
       }
     });
 
-    // 5. Extra -> Footer (Dark charcoal brand)
+    // 5. Extra -> Anatomy (Exploded view: warm kitchen amber)
+    gsap.to('body', {
+      ...SECTION_THEMES.anatomy,
+      ease: 'none',
+      immediateRender: false,
+      scrollTrigger: {
+        trigger: '#anatomy-root',
+        start: 'top bottom',
+        end: 'top 50%',
+        scrub: 0.5,
+      }
+    });
+
+    // 6. Anatomy -> Footer (Dark charcoal brand)
     gsap.to('body', {
       ...SECTION_THEMES.footer,
       ease: 'none',
@@ -314,6 +336,18 @@ export class ScrollAnimations {
         start: 'top bottom',
         end: 'top 50%',
         scrub: 0.5,
+      }
+    });
+
+    // ── Dedicated ScrollTrigger for 3D Layer Explosion ──
+    ScrollTrigger.create({
+      trigger: '#anatomy-root',
+      start: 'top 80%',
+      end: 'bottom 35%',
+      scrub: 0.2,
+      onUpdate: (self) => {
+        this.sceneManager.setExplosionProgress(self.progress);
+        document.dispatchEvent(new CustomEvent('foodlink:explosionupdate', { detail: { progress: self.progress } }));
       }
     });
 

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
 
-type FoodSection = 'hero' | 'features' | 'salad' | 'menu' | 'extra';
+type FoodSection = 'hero' | 'features' | 'salad' | 'menu' | 'extra' | 'anatomy';
 
 interface LightPreset {
   ambient: number;
@@ -48,6 +48,13 @@ const PRESETS: Record<FoodSection, LightPreset> = {
     fill: { color: 0xaa5533, intensity: 0.8, position: [4, 2, 2] },
     rim:  { color: 0xffffff, intensity: 1.0, position: [0, 5, -5] },
     spot: { color: 0xffeebb, intensity: 2.0, position: [-2, 8, 2] },
+  },
+  anatomy: { // Exploded Burger - Balanced warm studio, clean separation lighting
+    ambient: 0.04, hemisphere: 0.12, envIntensity: 0.4,
+    key:  { color: 0xffeed8, intensity: 1.45, position: [3.5, 6.0, 5.5] },
+    fill: { color: 0xd97525, intensity: 0.5, position: [-5, 2.0, 3] },
+    rim:  { color: 0xffbb60, intensity: 0.9, position: [-3, 5, -4] },
+    spot: { color: 0xffedd0, intensity: 2.1, position: [0, 8.0, 4] },
   },
 };
 

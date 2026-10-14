@@ -21,6 +21,7 @@ export const FOOD_SHADER_CONFIGS: Record<string, FoodShaderConfig> = {
   salad:    { sssColor: '#9bae7e', sssIntensity: 0.09, rimColor: '#e1e9cc', rimPower: 5.1, rimIntensity: 0.07, moisture: 0.35, environment: 0.70 }, // La ensalada sí necesita verse húmeda y fresca
   menu:     { sssColor: '#b59aaa', sssIntensity: 0.06, rimColor: '#eadce4', rimPower: 5.2, rimIntensity: 0.06, moisture: 0.25, environment: 0.55 },
   extra:    { sssColor: '#a97e68', sssIntensity: 0.05, rimColor: '#e6cdbb', rimPower: 5.4, rimIntensity: 0.05, moisture: 0.20, environment: 0.60 }, // Cupcake equilibrado
+  anatomy:  { sssColor: '#c99470', sssIntensity: 0.07, rimColor: '#f6dfc6', rimPower: 4.9, rimIntensity: 0.06, moisture: 0.22, environment: 0.50 }, // Despiece anatómico
 };
 
 type TimeUniform = { value: number };
@@ -139,7 +140,7 @@ export class MaterialEnhancer {
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <opaque_fragment>',
         /* glsl */ `
-          vec3 foodN = normalize(vFoodWorldNormal);
+          vec3 foodN = normalize(vFoodWorldNormal) * (gl_FrontFacing ? 1.0 : -1.0);
           vec3 foodV = normalize(cameraPosition - vFoodWorldPosition);
           float foodNdotV = clamp(dot(foodN, foodV), 0.0, 1.0);
           vec3 foodLightDirection = normalize(vec3(0.42, 0.84, 0.38));

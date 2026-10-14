@@ -22,7 +22,7 @@ export class PostProcessingManager {
       return;
     }
 
-    console.log('PostProcessingManager: Inicializando Pipeline ULTRA RTX 🚀');
+    console.log('PostProcessingManager: Inicializando Pipeline ULTRA RTX');
 
     // Create a render target with Alpha format to preserve CSS background
     const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {

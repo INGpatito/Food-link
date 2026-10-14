@@ -4,8 +4,10 @@ export function initMenuSection(container: HTMLElement | null) {
   container.innerHTML = `
     <div class="container mx-auto px-6 md:px-8 w-full min-h-[100dvh] flex flex-col lg:flex-row gap-10 lg:gap-16 items-start lg:items-center justify-start pointer-events-none pb-12 lg:pb-0 pt-28 lg:pt-0">
       <div class="w-full lg:w-1/2 flex flex-col gap-6 z-20 pointer-events-auto text-white mb-auto lg:mb-0">
-        <div class="self-start rounded-full border border-violet/30 bg-violet/10 px-4 py-2 text-sm font-bold uppercase tracking-[0.18em] text-violet">
-          Edición de aniversario
+        <div class="self-start rounded-full border border-violet/30 bg-violet/10 px-4 py-2 text-sm font-bold uppercase tracking-[0.18em] text-violet flex items-center gap-2">
+          <span>Capítulo IV &mdash; Obrador Dulce</span>
+          <span class="text-white/40">·</span>
+          <span class="text-white/70 text-xs normal-case tracking-normal">Tiradas diarias de repostería</span>
         </div>
 
         <h2 class="font-display font-bold text-5xl md:text-7xl leading-none uppercase">
@@ -14,19 +16,14 @@ export function initMenuSection(container: HTMLElement | null) {
         </h2>
 
         <p class="font-body text-white/80 text-lg leading-relaxed max-w-md">
-          Un pastel especial lleno de sabor, perfecto para compartir y celebrar a lo grande.
+          La pastelería artesanal suele afrontar pérdidas elevadas por su corta vida útil. Foodlink permite a los obradores publicar sus elaboraciones no vendidas de la jornada para que los vecinos puedan reservarlas a precio justo antes del cierre.
         </p>
 
-        <div class="mt-1 flex flex-wrap gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-white/70">
-          <span class="rounded-full border border-white/15 px-3 py-2">Frutos rojos</span>
-          <span class="rounded-full border border-white/15 px-3 py-2">Crema batida</span>
-        </div>
-
-        <div class="mt-2">
-          <button id="add-cake-btn" type="button" class="minimal-btn border-brand-1 bg-brand-1 text-charcoal hover:border-brand-2 hover:bg-brand-2">
-            Añadir al pedido <span aria-hidden="true">·</span> $25.00
+        <div class="mt-4">
+          <button id="add-cake-btn" type="button" class="minimal-btn border-brand-1 bg-brand-1 !text-[#181512] font-semibold hover:border-brand-2 hover:bg-brand-2 shadow-[0_4px_24px_rgba(251,229,200,0.25)]">
+            Probar dinámica de reserva &rarr;
           </button>
-          <p id="order-feedback" class="hidden mt-4 text-sm text-white/80" role="status" aria-live="polite"></p>
+          <p id="order-feedback" class="hidden mt-4 text-sm text-brand-1/90" role="status" aria-live="polite"></p>
         </div>
       </div>
 
@@ -39,14 +36,13 @@ export function initMenuSection(container: HTMLElement | null) {
 
   const addButton = container.querySelector<HTMLButtonElement>('#add-cake-btn');
   const feedback = container.querySelector<HTMLElement>('#order-feedback');
-  let quantity = 0;
+  let counter = 0;
 
   addButton?.addEventListener('click', () => {
-    quantity += 1;
+    counter += 1;
     if (!feedback) return;
 
-    const total = (quantity * 25.0).toFixed(2);
-    feedback.textContent = `${quantity} ${quantity === 1 ? 'cake añadido' : 'cakes añadidos'} · $${total}. Pedido de prueba; todavía no se envía.`;
+    feedback.textContent = `Demostración (${counter}): En la aplicación, esta acción genera un pase de recogida en el obrador para aprovechar la porción restante del día, evitando que termine desechada.`;
     feedback.classList.remove('hidden');
   });
 }

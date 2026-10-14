@@ -6,6 +6,7 @@ import { initFeaturesSection } from './sections/FeaturesSection';
 import { initSaladSection } from './sections/SaladSection';
 import { initMenuSection } from './sections/MenuSection';
 import { initExtraSection } from './sections/ExtraSection';
+import { initAnatomySection } from './sections/AnatomySection';
 import { initFooterSection } from './sections/FooterSection';
 import { initLoginModal } from './ui/LoginModal';
 
@@ -18,6 +19,7 @@ const startApp = async () => {
     initSaladSection(document.getElementById('salad-root'));
     initMenuSection(document.getElementById('menu-root'));
     initExtraSection(document.getElementById('extra-root'));
+    initAnatomySection(document.getElementById('anatomy-root'));
     initFooterSection(document.getElementById('footer-root'));
     initLoginModal(document.getElementById('login-modal-root'));
 

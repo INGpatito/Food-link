@@ -8,11 +8,12 @@ import { VolumetricRaysShader } from './shaders/VolumetricRaysShader';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { checkIsHighEndGPU } from '../utils/GPUDeviceDetector';
 import { PostProcessingManager } from './PostProcessingManager';
+import { LayeredFoodModel } from './LayeredFoodModel';
 
-type ModelSection = keyof typeof MODEL_PATHS;
+type ModelSection = (keyof typeof MODEL_PATHS) | 'anatomy';
 type SceneSection = ModelSection | 'footer';
 
-const ALL_MODEL_SECTIONS: ModelSection[] = ['hero', 'features', 'salad', 'menu', 'extra'];
+const ALL_MODEL_SECTIONS: ModelSection[] = ['hero', 'features', 'salad', 'menu', 'extra', 'anatomy'];
 
 export class SceneManager {
   private scene: THREE.Scene;
@@ -27,6 +28,8 @@ export class SceneManager {
 
   public models: Partial<Record<ModelSection, THREE.Group>> = {};
   public modelGroup: THREE.Group;
+  public layeredFoodModel: LayeredFoodModel | null = null;
+  private explosionProgress: number = 0;
   
   private clock: THREE.Timer;
   private activeSection: SceneSection = 'hero';
@@ -131,6 +134,40 @@ export class SceneManager {
     if (this.models[section]) return this.models[section]!;
     if (this.loadingModels.has(section)) return this.loadingModels.get(section)!;
 
+    if (section === 'anatomy') {
+      const loadTask = (async () => {
+        try {
+          if (!this.layeredFoodModel) {
+            this.layeredFoodModel = new LayeredFoodModel();
+          }
+
+          // Load original photorealistic burger model asset
+          const burgerModel = await this.modelLoader.load(MODEL_PATHS.hero, 'anatomy');
+          await this.layeredFoodModel.buildFromModel(burgerModel);
+
+          const model = this.layeredFoodModel.group;
+          const config = MODEL_CONFIGS.anatomy;
+          model.scale.multiplyScalar(config.scale);
+          this.materialEnhancer.enhanceModel(model, 'anatomy');
+          this.modelBaseScales.set(model, model.scale.clone());
+          model.visible = false;
+          this.models.anatomy = model;
+
+          // Ensure explosion is immediately in sync with current scroll progress
+          this.layeredFoodModel.setExplosion(this.explosionProgress);
+          return model;
+        } catch (error) {
+          console.error('Fallo la carga del modelo 3D (anatomy):', error);
+          return null;
+        } finally {
+          this.loadingModels.delete('anatomy');
+        }
+      })();
+
+      this.loadingModels.set(section, loadTask);
+      return loadTask;
+    }
+
     const loadTask = (async () => {
       try {
         const model = await this.modelLoader.load(MODEL_PATHS[section], section);
@@ -153,6 +190,13 @@ export class SceneManager {
 
     this.loadingModels.set(section, loadTask);
     return loadTask;
+  }
+
+  public setExplosionProgress(progress: number) {
+    this.explosionProgress = Math.min(1, Math.max(0, progress));
+    if (this.layeredFoodModel) {
+      this.layeredFoodModel.setExplosion(this.explosionProgress);
+    }
   }
 
   // ── Solo actualiza Shaders e Iluminación (el movimiento se hace en animate) ──
@@ -229,7 +273,7 @@ export class SceneManager {
         // inferior de la pantalla (valores Y negativos) para que el texto esté arriba.
         // La pantalla va de +2.07 (top) a -2.07 (bottom). El centro del hueco inferior es ~ -1.0.
         const mobileYMap: Record<string, number> = {
-          hero: -0.85, features: -1.05, salad: -0.95, menu: -0.95, extra: -1.0,
+          hero: -0.85, features: -1.05, salad: -0.95, menu: -0.95, extra: -1.0, anatomy: -0.95,
         };
         const basePositionY = compactLayout ? (mobileYMap[section] ?? config.position.y) : config.position.y;
         const basePositionX = compactLayout ? 0 : config.position.x;
@@ -237,9 +281,10 @@ export class SceneManager {
         // ── Matemáticas de la Hélice (ADN) ──
         // En móvil la hélice se estrecha, pero nunca se detiene: todos los platos
         // participan en la misma torsión que el contenido de la página.
-        const helixRadius = compactLayout ? 0.52 : 1.4;
-        const spiralY = -progress * 6.5; 
-        const spiralAngle = progress * Math.PI * 1.2;
+        const helixRadius = compactLayout ? 0.52 : (section === 'anatomy' ? 1.05 : 1.4);
+        const spiralSpeed = section === 'anatomy' ? 3.4 : 6.5;
+        const spiralY = -progress * spiralSpeed; 
+        const spiralAngle = progress * (section === 'anatomy' ? Math.PI * 0.8 : Math.PI * 1.2);
         
         const xOrbit = basePositionX + Math.sin(spiralAngle) * helixRadius;
         const zOrbit = config.position.z - Math.abs(Math.sin(spiralAngle)) * 1.2;

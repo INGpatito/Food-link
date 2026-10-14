@@ -6,8 +6,9 @@ export function initSaladSection(container: HTMLElement | null) {
       
       <div class="w-full lg:w-1/2 flex flex-col gap-4 md:gap-6 z-10 pointer-events-auto text-charcoal mb-auto lg:mb-0">
         
-        <div class="self-start uppercase tracking-widest text-[#2A5716] text-sm font-bold border-b border-[#2A5716]/30 pb-2 mb-4">
-          Capítulo III &mdash; Lo Fresco
+        <div class="uppercase tracking-widest text-[#2A5716] text-sm font-bold border-b border-[#2A5716]/30 pb-2 mb-4 flex items-center justify-between">
+          <span>Capítulo III &mdash; Huertos de Proximidad</span>
+          <span class="text-[0.68rem] font-medium text-charcoal/60 tracking-normal">Cosecha estacional y circuito corto</span>
         </div>
 
         <h2 class="font-display font-bold text-4xl md:text-6xl leading-none uppercase text-charcoal">
@@ -16,17 +17,17 @@ export function initSaladSection(container: HTMLElement | null) {
         </h2>
         
         <p class="font-body text-charcoal/80 text-base md:text-lg leading-relaxed mt-2 md:mt-4">
-          Hojas crujientes, aderezo artesanal y un balance perfecto de acidez y frescura para complementar tu comida.
+          La propuesta para cocina vegetal: vincular a los restaurantes directamente con huertos y agricultores regionales. Al aprovechar la cosecha de temporada completa y las producciones del día, se evita el desperdicio en campo y se garantiza producto fresco en la mesa.
         </p>
 
-        <ul class="flex flex-col gap-3 md:gap-4 mt-5 md:mt-8 font-body text-sm text-charcoal">
-          <li class="flex justify-between items-center border-b border-charcoal/20 pb-2">
-            <span class="font-bold">Fresca Romana</span>
-            <span class="text-brand-5 font-bold">$8.00</span>
+        <ul class="flex flex-col gap-3.5 md:gap-5 mt-5 md:mt-7 font-body text-sm text-charcoal">
+          <li class="flex justify-between items-center border-b border-charcoal/15 pb-2.5">
+            <span class="font-medium text-charcoal text-base">Hojas Mixtas y Brotes de Huerto</span>
+            <span class="text-xs uppercase tracking-widest text-[#2A5716]">Cosecha viva · Cultivo directo</span>
           </li>
-          <li class="flex justify-between items-center border-b border-charcoal/20 pb-2">
-            <span class="font-bold">Caprese Especial</span>
-            <span class="text-brand-5 font-bold">$10.50</span>
+          <li class="flex justify-between items-center border-b border-charcoal/15 pb-2.5">
+            <span class="font-medium text-charcoal text-base">Caprese de Proximidad</span>
+            <span class="text-xs uppercase tracking-widest text-[#2A5716]">Lote de rescate · Queso local</span>
           </li>
         </ul>
 

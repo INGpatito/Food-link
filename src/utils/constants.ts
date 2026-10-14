@@ -43,10 +43,15 @@ export const MODEL_CONFIGS = {
     position: { x: -2.0, y: -0.15, z: 0 },
     rotation: { x: 0.35, y: 0.45, z: 0 }
   },
+  anatomy: {
+    scale: 1.25,
+    position: { x: 1.35, y: -0.12, z: 0 },
+    rotation: { x: 0.28, y: -0.32, z: 0 }
+  },
 };
 
 // Model enters/exits from the SAME side as its section text:
-// Hero=text LEFT, Features=text RIGHT, Salad=text LEFT, Menu=text LEFT, Extra=text RIGHT
+// Hero=text LEFT, Features=text RIGHT, Salad=text LEFT, Menu=text LEFT, Extra=text RIGHT, Anatomy=text LEFT
 // enterFrom/exitTo: -1 = left, 1 = right
 export const MODEL_TRANSITIONS = {
   hero:     { enterFrom: -1, exitTo: -1 },
@@ -54,6 +59,7 @@ export const MODEL_TRANSITIONS = {
   salad:    { enterFrom: -1, exitTo: -1 },
   menu:     { enterFrom: -1, exitTo: -1 },
   extra:    { enterFrom:  1, exitTo:  1 },
+  anatomy:  { enterFrom: -1, exitTo: -1 },
 } as const;
 
 export const SECTION_THEMES = {
@@ -110,6 +116,17 @@ export const SECTION_THEMES = {
     '--model-glow-x': '28%',
     '--model-glow-y': '50%',
     '--ambient-primary-pos': '80% 30%',
+    '--ambient-secondary-pos': '50% 85%'
+  },
+  anatomy: {
+    backgroundColor: '#161311',
+    color: '#FBE5C8',
+    '--ambient-model': 'rgba(235, 145, 60, 0.40)',
+    '--ambient-primary': 'rgba(215, 120, 40, 0.25)',
+    '--ambient-secondary': 'rgba(180, 80, 25, 0.18)',
+    '--model-glow-x': '72%',
+    '--model-glow-y': '50%',
+    '--ambient-primary-pos': '20% 30%',
     '--ambient-secondary-pos': '50% 85%'
   },
   footer: {

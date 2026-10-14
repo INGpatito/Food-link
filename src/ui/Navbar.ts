@@ -10,12 +10,14 @@ export function initNavbar(container: HTMLElement | null) {
           Foodlink<span class="text-brand-3">.</span>
         </a>
       
-        <div class="hidden md:flex items-center gap-8 font-body font-medium text-sm tracking-wide">
+        <div class="hidden md:flex items-center gap-7 font-body font-medium text-sm tracking-wide">
           <a href="#hero-root" class="nav-link" data-nav-section="hero" aria-current="page">Inicio</a>
-          <a href="#features-root" class="nav-link" data-nav-section="features">Origen</a>
-          <a href="#salad-root" class="nav-link" data-nav-section="salad">Ensalada</a>
-          <a href="#menu-root" class="nav-link" data-nav-section="menu">Especiales</a>
-          <a href="#extra-root" class="nav-link" data-nav-section="extra">Extra</a>
+          <a href="#features-root" class="nav-link" data-nav-section="features">Propuesta</a>
+          <a href="#salad-root" class="nav-link" data-nav-section="salad">Origen</a>
+          <a href="#menu-root" class="nav-link" data-nav-section="menu">Aprovechamiento</a>
+          <a href="#extra-root" class="nav-link" data-nav-section="extra">Proyectos</a>
+          <a href="#anatomy-root" class="nav-link" data-nav-section="anatomy">Anatomía</a>
+          <a href="#footer-root" class="nav-link" data-nav-section="footer">Pilares</a>
         </div>
 
         <div class="flex items-center gap-4">
@@ -40,10 +42,12 @@ export function initNavbar(container: HTMLElement | null) {
       <div id="mobile-navigation" class="site-mobile-nav absolute right-4 top-full mt-3 hidden w-[calc(100%-2rem)] max-w-sm rounded-3xl border p-6 shadow-2xl md:hidden">
         <div class="flex flex-col gap-5 font-body font-medium text-sm">
           <a href="#hero-root" class="nav-link">Inicio</a>
-          <a href="#features-root" class="nav-link">Origen</a>
-          <a href="#salad-root" class="nav-link">Ensalada</a>
-          <a href="#menu-root" class="nav-link">Especiales</a>
-          <a href="#extra-root" class="nav-link">Extra</a>
+          <a href="#features-root" class="nav-link">Propuesta</a>
+          <a href="#salad-root" class="nav-link">Origen</a>
+          <a href="#menu-root" class="nav-link">Aprovechamiento</a>
+          <a href="#extra-root" class="nav-link">Proyectos</a>
+          <a href="#anatomy-root" class="nav-link">Anatomía</a>
+          <a href="#footer-root" class="nav-link">Pilares</a>
           <button id="open-login-mobile-btn" class="nav-link text-left font-bold uppercase tracking-wide" type="button">
             Ingresar
           </button>

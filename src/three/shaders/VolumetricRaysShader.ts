@@ -133,6 +133,7 @@ export class VolumetricRaysShader {
         else if (section === 'features') targetIntensity = 0.25; // Fire oven rays
         else if (section === 'menu') targetIntensity = 0.12; // Darker mood
         else if (section === 'extra') targetIntensity = 0.18; // Warm chocolate vibe
+        else if (section === 'anatomy') targetIntensity = 0.22; // Anatomical studio glow
         else targetIntensity = 0.25; // Hero
       }
     }
