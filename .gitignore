@@ -17,3 +17,8 @@ Food/
 *.iml
 Foodlink/.idea/
 Foodlink/*.iml
+
+# Agentes de IA y temporales de teamwork
+.agents/
+.agents
+
