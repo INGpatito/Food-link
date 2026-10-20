@@ -1,0 +1,222 @@
+/* ====================================================================
+   FOODLINK STUDIO HUD & GLASS STYLES
+   Zero emojis strictly enforced.
+   ==================================================================== */
+
+.hud-glass {
+    background: rgba(18, 22, 20, 0.34);
+    backdrop-filter: blur(18px) saturate(1.45);
+    -webkit-backdrop-filter: blur(18px) saturate(1.45);
+    border: 1px solid rgba(245, 242, 235, 0.13);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+    transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hud-glass:hover {
+    border-color: rgba(244, 162, 97, 0.32);
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.38), 0 0 24px rgba(224, 90, 54, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.hud-glass-accent {
+    background: linear-gradient(135deg, rgba(224, 90, 54, 0.16) 0%, rgba(18, 22, 20, 0.38) 100%);
+    backdrop-filter: blur(18px) saturate(1.45);
+    -webkit-backdrop-filter: blur(18px) saturate(1.45);
+    border: 1px solid rgba(224, 90, 54, 0.35);
+    box-shadow: 0 18px 44px rgba(224, 90, 54, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+#scroll-content {
+    position: relative;
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 0.55s cubic-bezier(0.16, 1, 0.3, 1), filter 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.inspect-mode #scroll-content {
+    opacity: 0.08;
+    filter: blur(4px);
+}
+
+.interactive-el {
+    pointer-events: auto;
+}
+
+body.inspect-mode .interactive-el:not(.keep-interactive) {
+    pointer-events: none;
+}
+
+.hero-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 0.92;
+    background: linear-gradient(180deg, #fffdf9 0%, #f5ebdc 45%, #d2bfa8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.35));
+}
+
+.reveal-card {
+    opacity: 0;
+    transform: translateY(28px);
+    will-change: transform, opacity;
+}
+
+input[type=range].hud-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 5px;
+    background: rgba(245, 242, 235, 0.14);
+    border-radius: 999px;
+    outline: none;
+}
+
+input[type=range].hud-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #e05a36;
+    border: 2px solid #f5f2eb;
+    cursor: pointer;
+    box-shadow: 0 0 14px rgba(224, 90, 54, 0.65);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+input[type=range].hud-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.28);
+    background: #f4a261;
+}
+
+@keyframes subtleFloat {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
+}
+
+.float-subtle {
+    animation: subtleFloat 3.8s infinite ease-in-out;
+}
+
+@keyframes scanlineMove {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+}
+
+.hud-scanline {
+    position: relative;
+    overflow: hidden;
+}
+
+.hud-scanline::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 45%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(244, 162, 97, 0.08), transparent);
+    animation: scanlineMove 4.5s infinite linear;
+    pointer-events: none;
+}
+
+/* ====================================================================
+   FOODLINK SCROLL PROMPT CAPSULE
+   Zero emojis strictly enforced.
+   ==================================================================== */
+
+.scroll-prompt-capsule {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 20px 9px 12px;
+    border-radius: 9999px;
+    background: rgba(22, 18, 15, 0.82);
+    backdrop-filter: blur(24px) saturate(1.7);
+    -webkit-backdrop-filter: blur(24px) saturate(1.7);
+    border: 1px solid rgba(245, 242, 235, 0.12);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), 0 0 24px rgba(232, 106, 51, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+    pointer-events: auto;
+}
+
+.scroll-prompt-capsule:hover {
+    border-color: rgba(232, 106, 51, 0.5);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 0 28px rgba(232, 106, 51, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.scroll-prompt-capsule:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.scroll-prompt-badge {
+    padding: 3px 9px;
+    border-radius: 9999px;
+    background: rgba(232, 106, 51, 0.22);
+    border: 1px solid rgba(232, 106, 51, 0.45);
+    color: #F2A65A;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+}
+
+.scroll-prompt-label {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #f5f2eb;
+    text-transform: uppercase;
+}
+
+.scroll-prompt-dish {
+    font-family: 'Outfit', sans-serif;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: #B8AEA5;
+}
+
+/* Minimalist mouse wheel / scroll-track indicator without double chevrons */
+.scroll-mouse-track {
+    position: relative;
+    width: 14px;
+    height: 22px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(232, 106, 51, 0.55);
+    display: flex;
+    justify-content: center;
+    padding-top: 3px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.scroll-mouse-wheel {
+    width: 3px;
+    height: 5px;
+    border-radius: 2px;
+    background-color: #E86A33;
+    animation: scrollMouseGlide 1.8s infinite ease-in-out;
+}
+
+@keyframes scrollMouseGlide {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    60% {
+        transform: translateY(6px);
+        opacity: 0.2;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 0;
+    }
+}

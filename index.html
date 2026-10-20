@@ -1,51 +1,39 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark scroll-smooth">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Foodlink conecta a los comensales con cocinas y obradores locales, visibilizando el origen de los ingredientes y aprovechando los lotes del día para evitar el desperdicio." />
-  <meta name="theme-color" content="#181512" />
-  <title>FOODLINK — Cocina de proximidad y cero desperdicio</title>
-  
-  <link rel="stylesheet" href="/src/styles/global.css" /> <!-- Local styles and bundled fonts -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FOODLINK &mdash; El Arte de Rescatar el Sabor | Red Gastronomica 3D</title>
+    <!-- Bundled Stylesheet Entry (Tailwind v4, Typography, Atmosphere, HUD & Morph Cards) -->
+    <link rel="stylesheet" href="/src/styles/global.css">
 </head>
-<body class="antialiased selection:bg-brand-4 selection:text-white" data-section="hero">
-  <div id="noise-overlay"></div>
-  <!-- Kept outside #app so its fixed positioning is never captured by the
-       perspective used for the DNA transition below. -->
-  <div id="navbar-root"></div>
-
-  <!-- UI Container -->0000
-  <main class="relative z-20 w-full overflow-hidden" id="app">
-    <!-- Hero Section (Burger) -->
-    <section id="hero-root" class="relative w-full min-h-[100dvh] flex items-stretch"></section>
+<body class="text-cream antialiased selection:bg-terracotta/30">
+    <!-- Atmospheric Ambient Backdrops -->
+    <div class="atmosphere-glow" id="atmosphere-glow"></div>
+    <div class="grid-backdrop"></div>
     
-    <!-- Editorial Section (Pizza) -->
-    <section id="features-root" class="relative w-full min-h-[100dvh] flex items-stretch"></section>
-    
-    <!-- Salad Section (Italian Salad) -->
-    <section id="salad-root" class="relative w-full min-h-[100dvh] flex items-stretch"></section>
+    <!-- 3D Canvas Mount Point -->
+    <div id="webgl-container" aria-label="Escena 3D interactiva de Foodlink"></div>
+    <div class="atmosphere-overlay"></div>
 
-    <!-- Menu Section (Cake) -->
-    <section id="menu-root" class="relative w-full min-h-[100dvh] flex items-stretch"></section>
+    <!-- UI Mount Points -->
+    <!-- Fixed Top Navigation & Brand Identity -->
+    <header id="navbar-root"></header>
 
-    <!-- Extra Section (Extra Chocolate) -->
-    <section id="extra-root" class="relative w-full min-h-[100dvh] flex items-stretch"></section>
+    <!-- Orbital Morph Layer (4 Quadrants 3D-to-HUD Screen-Space Cards) -->
+    <div id="orbital-morph-layer" aria-live="polite"></div>
 
-    <!-- Anatomy Section (Exploded Model) -->
-    <section id="anatomy-root" class="relative w-full min-h-[130dvh] flex items-stretch"></section>
+    <!-- Scroll Storytelling Narrative Stages (#stage-1..4) -->
+    <main id="scroll-root"></main>
 
-    <!-- Footer / Final CTA -->
-    <section id="footer-root" class="relative w-full py-20"></section>
-    
-  </main>
+    <!-- Studio Telemetry & HUD Controls -->
+    <aside id="hud-root"></aside>
 
-  <!-- Login Modal Root -->
-  <div id="login-modal-root"></div>
+    <!-- System Modals (Inspect 3D & Kitchen Registration & Login Modal) -->
+    <div id="modals-root"></div>
+    <div id="login-modal-root"></div>
 
-  <!-- Three.js Canvas -->
-  <canvas id="webgl-canvas"></canvas>
-
-  <script type="module" src="/src/main.ts"></script> <!-- Main JS entry point -->
+    <!-- Modular TypeScript Application Entry Point -->
+    <script type="module" src="/src/main.ts"></script>
 </body>
-</html><!--- -->
+</html>

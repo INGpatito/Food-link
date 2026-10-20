@@ -1,0 +1,71 @@
+/* ====================================================================
+   FOODLINK ATMOSPHERE & WEBGL BACKDROP STYLES
+   Zero emojis strictly enforced.
+   ==================================================================== */
+
+:root {
+    --ambient-model: rgba(245, 166, 65, 0.55);
+    --ambient-primary: rgba(230, 135, 45, 0.40);
+    --ambient-secondary: rgba(185, 85, 25, 0.30);
+    --model-glow-x: 50%;
+    --model-glow-y: 48%;
+    --ambient-primary-pos: 25% 35%;
+    --ambient-secondary-pos: 75% 75%;
+}
+
+.atmosphere-glow {
+    position: fixed;
+    inset: -15%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.96;
+    filter: blur(50px);
+    transform: scale(1.03);
+    background:
+        radial-gradient(circle 680px at var(--model-glow-x, 50%) var(--model-glow-y, 48%), var(--ambient-model, rgba(245, 166, 65, 0.55)) 0%, transparent 70%),
+        radial-gradient(ellipse 960px 760px at var(--ambient-primary-pos, 25% 35%), var(--ambient-primary, rgba(230, 135, 45, 0.40)) 0%, transparent 72%),
+        radial-gradient(ellipse 860px 660px at var(--ambient-secondary-pos, 75% 75%), var(--ambient-secondary, rgba(185, 85, 25, 0.30)) 0%, transparent 68%),
+        radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.38) 100%),
+        linear-gradient(145deg, rgba(255, 255, 255, 0.025) 0%, transparent 55%, rgba(0, 0, 0, 0.32) 100%);
+    will-change: opacity, transform, background;
+}
+
+.grid-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background-size: 64px 64px;
+    background-image:
+        linear-gradient(to right, rgba(245, 242, 235, 0.022) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(245, 242, 235, 0.022) 1px, transparent 1px);
+    mask-image: radial-gradient(circle at 50% 50%, black 22%, transparent 86%);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, black 22%, transparent 86%);
+}
+
+#webgl-container {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 2;
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: pan-y;
+}
+
+#webgl-container:active,
+body.is-dragging-3d,
+body.is-dragging-3d #webgl-container {
+    cursor: grabbing !important;
+}
+
+.atmosphere-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 82% 72% at 50% 50%, transparent 42%, rgba(10, 12, 11, 0.55) 100%),
+        linear-gradient(180deg, rgba(10, 12, 11, 0.38) 0%, transparent 15%, transparent 85%, rgba(10, 12, 11, 0.65) 100%);
+}

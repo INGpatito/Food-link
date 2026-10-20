@@ -1,0 +1,464 @@
+/* ====================================================================
+   FOODLINK ORBITAL MORPH LAYER STYLES — LUXURY CULINARY EDITION
+   Zero emojis strictly enforced.
+   ==================================================================== */
+
+#orbital-morph-layer {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 25;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+body.inspect-mode #orbital-morph-layer {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* ---- BASE CARD ELEMENT ---- */
+.orbital-morph-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    min-width: 16px;
+    min-height: 16px;
+    will-change: transform, opacity, width, max-height;
+    transition: width 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+                max-height 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+                border-radius 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 0.35s ease,
+                border-color 0.35s ease,
+                box-shadow 0.42s ease;
+}
+
+/* ==================================================================
+   STATE: .is-dot  (Punto orbital en sincronía con Three.js)
+   ================================================================== */
+.orbital-morph-card.is-dot {
+    width: 16px;
+    max-height: 16px;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    border: 1.5px solid rgba(245, 242, 235, 0.95);
+    box-shadow:
+        0 0 16px rgba(14, 165, 233, 0.85),
+        0 0 32px rgba(56, 189, 248, 0.55),
+        inset 0 0 5px rgba(255, 255, 255, 0.85);
+    pointer-events: none;
+    cursor: pointer;
+    overflow: visible;
+}
+
+.orbital-morph-card .morph-dot-beacon {
+    position: absolute;
+    inset: -7px;
+    border-radius: 9999px;
+    border: 1.5px solid rgba(56, 189, 248, 0.75);
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.6);
+    transition: opacity 0.3s ease;
+}
+
+.orbital-morph-card.is-dot .morph-dot-beacon {
+    opacity: 1;
+    animation: morphBeaconPulse 2.2s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes morphBeaconPulse {
+    0% { transform: scale(0.7); opacity: 0.9; }
+    50% { transform: scale(1.6); opacity: 0.3; }
+    100% { transform: scale(2.3); opacity: 0; }
+}
+
+.orbital-morph-card.is-dot .orbital-card-inner {
+    opacity: 0;
+    max-height: 0;
+    pointer-events: none;
+    transform: translateY(12px) scale(0.88);
+    visibility: hidden;
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+/* ==================================================================
+   STATE: .is-card  (Luxury Glass HUD Panel)
+   ================================================================== */
+.orbital-morph-card.is-card {
+    width: 330px;
+    max-width: calc(100vw - 28px);
+    max-height: 320px;
+    border-radius: 1.4rem;
+    background:
+        linear-gradient(168deg, rgba(42, 32, 24, 0.45) 0%, rgba(12, 14, 13, 0.92) 100%);
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    border: 1px solid rgba(244, 162, 97, 0.22);
+    box-shadow:
+        0 24px 56px rgba(0, 0, 0, 0.55),
+        0 0 40px rgba(224, 90, 54, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+    overflow: hidden;
+}
+
+/* Top accent glow bar */
+.orbital-morph-card.is-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 24px;
+    right: 24px;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(244, 162, 97, 0.5) 20%,
+        rgba(232, 106, 51, 0.7) 50%,
+        rgba(244, 162, 97, 0.5) 80%,
+        transparent 100%
+    );
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+/* Ambient glow halo behind card */
+.orbital-morph-card.is-card::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: radial-gradient(
+        ellipse at 50% 0%,
+        rgba(244, 162, 97, 0.06) 0%,
+        transparent 70%
+    );
+    pointer-events: none;
+    z-index: -1;
+}
+
+.orbital-morph-card.is-card:hover {
+    border-color: rgba(244, 162, 97, 0.42);
+    box-shadow:
+        0 28px 64px rgba(0, 0, 0, 0.62),
+        0 0 48px rgba(224, 90, 54, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+.orbital-morph-card.is-card:hover .orbital-card-inner {
+    transform: translateY(-1px);
+}
+
+.orbital-morph-card.is-card .morph-dot-beacon {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+/* ---- CARD INNER CONTENT ---- */
+.orbital-morph-card.is-card .orbital-card-inner {
+    opacity: 1;
+    max-height: 310px;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+    visibility: visible;
+    padding: 1.2rem 1.3rem 1rem;
+    overflow: hidden;
+}
+
+.orbital-card-inner {
+    transition: opacity 0.28s ease 0.06s,
+                visibility 0.28s ease,
+                transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.04s,
+                max-height 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+                padding 0.35s ease;
+}
+
+/* ---- TAG LINE (Chapter label + badge) ---- */
+.mc-tag-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.mc-tag-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: #f4a261;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, rgba(244, 162, 97, 0.12) 0%, rgba(232, 106, 51, 0.08) 100%);
+    border: 1px solid rgba(244, 162, 97, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle shimmer sweep on tag */
+.mc-tag-label::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    animation: tagShimmer 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes tagShimmer {
+    0%, 100% { left: -100%; }
+    50% { left: 150%; }
+}
+
+.mc-badge {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: #e05a36;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(224, 90, 54, 0.10);
+    border: 1px solid rgba(224, 90, 54, 0.25);
+}
+
+/* ---- TITLE ---- */
+.mc-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #f5f2eb;
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+    margin-bottom: 8px;
+    position: relative;
+}
+
+/* ---- DESCRIPTION ---- */
+.mc-desc {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.73rem;
+    color: rgba(245, 242, 235, 0.72);
+    line-height: 1.55;
+    margin-bottom: 12px;
+}
+
+/* ---- DECORATIVE DIVIDER ---- */
+.mc-divider {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.mc-divider-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(244, 162, 97, 0.28) 0%, rgba(245, 242, 235, 0.08) 50%, rgba(244, 162, 97, 0.12) 100%);
+}
+
+/* ---- FOOTER METADATA ---- */
+.mc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+}
+
+.mc-footer-left {
+    color: rgba(245, 242, 235, 0.45);
+}
+
+.mc-footer-right {
+    color: #8ab17d;
+}
+
+/* ---- CARD 3: METRIC VARIANT ---- */
+.mc-metric-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.mc-metric-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #8ab17d;
+}
+
+.mc-metric-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #f4a261;
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(244, 162, 97, 0.25);
+}
+
+/* ---- CARD 1 ALT BADGE ---- */
+.mc-alt-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(245, 242, 235, 0.4);
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(245, 242, 235, 0.08);
+}
+
+/* ---- CORNER ORNAMENTS ---- */
+.mc-corner {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+}
+
+.orbital-morph-card.is-card:hover .mc-corner {
+    opacity: 0.55;
+}
+
+.mc-corner--tl {
+    top: 10px;
+    left: 10px;
+    border-top: 1px solid rgba(244, 162, 97, 0.5);
+    border-left: 1px solid rgba(244, 162, 97, 0.5);
+}
+
+.mc-corner--tr {
+    top: 10px;
+    right: 10px;
+    border-top: 1px solid rgba(244, 162, 97, 0.5);
+    border-right: 1px solid rgba(244, 162, 97, 0.5);
+}
+
+.mc-corner--bl {
+    bottom: 10px;
+    left: 10px;
+    border-bottom: 1px solid rgba(244, 162, 97, 0.5);
+    border-left: 1px solid rgba(244, 162, 97, 0.5);
+}
+
+.mc-corner--br {
+    bottom: 10px;
+    right: 10px;
+    border-bottom: 1px solid rgba(244, 162, 97, 0.5);
+    border-right: 1px solid rgba(244, 162, 97, 0.5);
+}
+
+/* ==================================================================
+   RESPONSIVE: Mobile (max-width: 640px)
+   ================================================================== */
+@media (max-width: 640px) {
+    .orbital-morph-card.is-card {
+        width: calc(50vw - 16px);
+        min-width: 148px;
+        max-width: 220px;
+        max-height: 280px;
+        border-radius: 1rem;
+    }
+    .orbital-morph-card.is-card .orbital-card-inner {
+        padding: 0.7rem 0.8rem 0.6rem;
+        max-height: 270px;
+    }
+    .mc-tag-row { margin-bottom: 6px; }
+    .mc-tag-label { font-size: 7.5px; padding: 3px 8px; letter-spacing: 0.15em; }
+    .mc-badge { font-size: 7px; padding: 2px 6px; }
+    .mc-title { font-size: 0.88rem; margin-bottom: 4px; }
+    .mc-desc { font-size: 0.65rem; line-height: 1.4; margin-bottom: 8px; }
+    .mc-divider { margin-bottom: 6px; }
+    .mc-footer { font-size: 7.5px; }
+    .mc-metric-value { font-size: 1.05rem; }
+    .mc-metric-label { font-size: 7.5px; }
+    .mc-corner { width: 8px; height: 8px; }
+    .mc-corner--tl { top: 7px; left: 7px; }
+    .mc-corner--tr { top: 7px; right: 7px; }
+    .mc-corner--bl { bottom: 7px; left: 7px; }
+    .mc-corner--br { bottom: 7px; right: 7px; }
+    .mc-alt-badge { font-size: 6.5px; padding: 2px 6px; }
+}
+
+/* ==================================================================
+   RESPONSIVE: Tablet (641px - 1023px)
+   ================================================================== */
+@media (min-width: 641px) and (max-width: 1023px) {
+    .orbital-morph-card.is-card {
+        width: 290px;
+        max-height: 300px;
+        border-radius: 1.2rem;
+    }
+    .orbital-morph-card.is-card .orbital-card-inner {
+        padding: 1rem 1.1rem 0.85rem;
+        max-height: 290px;
+    }
+    .mc-title { font-size: 1.1rem; }
+    .mc-desc { font-size: 0.7rem; }
+}
+
+/* ==================================================================
+   RESPONSIVE: Compact Vertical (max-height: 550px)
+   ================================================================== */
+@media (max-height: 550px) {
+    .orbital-morph-card.is-card {
+        max-height: 155px !important;
+        border-radius: 0.85rem !important;
+    }
+    .orbital-morph-card.is-card .orbital-card-inner {
+        padding: 0.45rem 0.7rem !important;
+        max-height: 148px !important;
+    }
+    .mc-tag-row { margin-bottom: 4px !important; }
+    .mc-tag-label { font-size: 7px !important; padding: 2px 6px !important; }
+    .mc-badge { font-size: 6.5px !important; }
+    .mc-title {
+        font-size: 0.75rem !important;
+        line-height: 1.15 !important;
+        margin-bottom: 3px !important;
+    }
+    .mc-desc {
+        font-size: 0.58rem !important;
+        line-height: 1.25 !important;
+        margin-bottom: 5px !important;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .mc-divider { margin-bottom: 4px !important; }
+    .mc-footer { font-size: 7px !important; }
+    .mc-metric-value { font-size: 0.85rem !important; }
+    .mc-corner { display: none !important; }
+}

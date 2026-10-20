@@ -86,11 +86,11 @@ export const SECTION_THEMES = {
     '--ambient-secondary-pos': '50% 85%'
   },
   salad: {
-    backgroundColor: '#EAF5E3',
-    color: '#181512',
-    '--ambient-model': 'rgba(68, 170, 45, 0.35)',
-    '--ambient-primary': 'rgba(165, 220, 75, 0.25)',
-    '--ambient-secondary': 'rgba(245, 205, 70, 0.20)',
+    backgroundColor: '#0c1410',
+    color: '#FBE5C8',
+    '--ambient-model': 'rgba(48, 88, 58, 0.28)',
+    '--ambient-primary': 'rgba(62, 102, 72, 0.20)',
+    '--ambient-secondary': 'rgba(36, 68, 48, 0.16)',
     '--model-glow-x': '72%',
     '--model-glow-y': '50%',
     '--ambient-primary-pos': '20% 30%',

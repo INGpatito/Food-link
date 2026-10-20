@@ -1,0 +1,312 @@
+/* ====================================================================
+   FOODLINK FLOATING NAVIGATION BAR STYLES
+   High-end culinary luxury aesthetic with glassmorphism.
+   Zero emojis strictly enforced.
+   ==================================================================== */
+
+.nav-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    padding: 16px 24px;
+    pointer-events: none;
+    transition: all 0.35s ease;
+}
+
+@media (max-width: 640px) {
+    .nav-wrapper {
+        padding: 12px 14px;
+    }
+}
+
+.nav-container {
+    max-width: 1480px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+/* Glassmorphism Capsule Base */
+.nav-capsule {
+    background: rgba(22, 18, 15, 0.78);
+    backdrop-filter: blur(24px) saturate(1.7);
+    -webkit-backdrop-filter: blur(24px) saturate(1.7);
+    border: 1px solid rgba(245, 242, 235, 0.1);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: auto;
+}
+
+.nav-capsule:hover {
+    border-color: rgba(232, 106, 51, 0.35);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6), 0 0 20px rgba(232, 106, 51, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+/* Brand Capsule */
+.nav-brand-capsule {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 18px 7px 9px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.nav-brand-logo-ring {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(242, 166, 90, 0.28) 0%, rgba(232, 106, 51, 0.14) 100%);
+    border: 1px solid rgba(232, 106, 51, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #E86A33;
+    box-shadow: 0 0 14px rgba(232, 106, 51, 0.2);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+}
+
+.nav-brand-capsule:hover .nav-brand-logo-ring {
+    transform: rotate(25deg) scale(1.06);
+    border-color: rgba(242, 166, 90, 0.7);
+    box-shadow: 0 0 22px rgba(232, 106, 51, 0.42);
+    color: #F2A65A;
+}
+
+.nav-brand-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: 0.14em;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.nav-brand-dot {
+    color: #E86A33;
+}
+
+.nav-brand-tagline {
+    font-family: 'Outfit', sans-serif;
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #B8AEA5;
+    text-transform: uppercase;
+    margin-top: 3px;
+    line-height: 1;
+}
+
+/* Stage Navigation Capsule (Center) */
+.nav-stages-capsule {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px;
+}
+
+.nav-stage-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #f5f2eb;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.nav-stage-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #F2A65A;
+    opacity: 0.85;
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-stage-name {
+    transition: color 0.2s ease;
+}
+
+.nav-stage-item:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-stage-item:hover .nav-stage-num {
+    color: #ffffff;
+    opacity: 1;
+}
+
+/* Active Stage State: Glowing terracotta pill with crisp white text */
+.nav-stage-item.is-active {
+    background: linear-gradient(135deg, #E86A33 0%, #C7452A 100%);
+    color: #ffffff;
+    font-weight: 700;
+    box-shadow: 0 4px 18px rgba(232, 106, 51, 0.45);
+}
+
+.nav-stage-item.is-active .nav-stage-num {
+    color: #ffffff;
+    opacity: 1;
+}
+
+/* Action Buttons (Right) */
+.nav-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    pointer-events: auto;
+}
+
+/* Login / Account Button */
+.nav-btn-account {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #f5f2eb;
+    background: rgba(22, 18, 15, 0.78);
+    backdrop-filter: blur(24px) saturate(1.7);
+    -webkit-backdrop-filter: blur(24px) saturate(1.7);
+    border: 1px solid rgba(245, 242, 235, 0.1);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.nav-btn-account:hover {
+    color: #ffffff;
+    border-color: rgba(232, 106, 51, 0.45);
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6), 0 0 18px rgba(232, 106, 51, 0.15);
+    transform: translateY(-1px);
+}
+
+.nav-btn-account:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* User active pulse dot when authenticated */
+.nav-user-indicator {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 8px #10B981;
+    display: inline-block;
+}
+
+/* Primary CTA: Registrar Cocina */
+.nav-btn-cta {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ffffff;
+    background: linear-gradient(135deg, #E86A33 0%, #B83A1B 100%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 24px rgba(232, 106, 51, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    white-space: nowrap;
+}
+
+.nav-btn-cta:hover {
+    background: linear-gradient(135deg, #F27842 0%, #C7452A 100%);
+    box-shadow: 0 10px 28px rgba(232, 106, 51, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px) scale(1.02);
+}
+
+.nav-btn-cta:active {
+    transform: translateY(0) scale(0.98);
+}
+
+/* Mobile Menu Toggle Button */
+.nav-mobile-toggle {
+    display: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(22, 18, 15, 0.78);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(245, 242, 235, 0.1);
+    color: #f5f2eb;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    pointer-events: auto;
+}
+
+.nav-mobile-toggle:hover {
+    color: #ffffff;
+    border-color: rgba(232, 106, 51, 0.4);
+}
+
+@media (max-width: 1024px) {
+    .nav-stages-capsule {
+        display: none;
+    }
+    .nav-mobile-toggle {
+        display: flex;
+    }
+}
+
+/* Mobile Dropdown Drawer */
+.nav-mobile-drawer {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 14px;
+    right: 14px;
+    background: rgba(20, 16, 13, 0.95);
+    backdrop-filter: blur(28px) saturate(1.8);
+    -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    border: 1px solid rgba(232, 106, 51, 0.25);
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(232, 106, 51, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: auto;
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.nav-mobile-drawer.is-open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}

@@ -1,50 +1,129 @@
-import { SceneManager } from './three/SceneManager';
-import { ScrollAnimations } from './animations/ScrollAnimations';
-import { initNavbar } from './ui/Navbar';
-import { initHeroSection } from './sections/HeroSection';
-import { initFeaturesSection } from './sections/FeaturesSection';
-import { initSaladSection } from './sections/SaladSection';
-import { initMenuSection } from './sections/MenuSection';
-import { initExtraSection } from './sections/ExtraSection';
-import { initAnatomySection } from './sections/AnatomySection';
-import { initFooterSection } from './sections/FooterSection';
-import { initLoginModal } from './ui/LoginModal';
+import Lenis from 'lenis';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-const startApp = async () => {
-  try {
-    // 1. Initialize UI Elements First
-    initNavbar(document.getElementById('navbar-root'));
-    initHeroSection(document.getElementById('hero-root'));
-    initFeaturesSection(document.getElementById('features-root'));
-    initSaladSection(document.getElementById('salad-root'));
-    initMenuSection(document.getElementById('menu-root'));
-    initExtraSection(document.getElementById('extra-root'));
-    initAnatomySection(document.getElementById('anatomy-root'));
-    initFooterSection(document.getElementById('footer-root'));
-    initLoginModal(document.getElementById('login-modal-root'));
+import { SceneManager } from './three/SceneManager.ts';
+import { Navbar } from './ui/Navbar.ts';
+import { OrbitalMorphLayer } from './ui/OrbitalMorphLayer.ts';
+import { ScrollStory } from './ui/ScrollStory.ts';
+import { StudioHUD } from './ui/StudioHUD.ts';
+import { Modals } from './ui/Modals.ts';
+import { initLoginModal } from './ui/LoginModal.ts';
 
-    // 2. Initialize Three.js Scene
-    const canvas = document.getElementById('webgl-canvas') as HTMLCanvasElement;
-    if (!canvas) throw new Error('WebGL Canvas not found');
+gsap.registerPlugin(ScrollTrigger);
 
-    const sceneManager = new SceneManager(canvas);
-    (window as any).sceneManager = sceneManager;
-    await sceneManager.init();
+/**
+ * Main application bootstrap wiring UI modules, 3D SceneManager,
+ * smooth scrolling, and user interactions.
+ * Zero emojis strictly enforced.
+ */
+function initApp(): void {
+    const webglContainer = document.getElementById('webgl-container');
+    const navbarRoot = document.getElementById('navbar-root');
+    const orbitalMorphRoot = document.getElementById('orbital-morph-layer');
+    const scrollRoot = document.getElementById('scroll-root');
+    const hudRoot = document.getElementById('hud-root');
+    const modalsRoot = document.getElementById('modals-root');
+    const loginModalRoot = document.getElementById('login-modal-root');
 
-    // 3. Initialize Scroll Animations (GSAP + Lenis)
-    const scrollAnimations = new ScrollAnimations(sceneManager);
-    scrollAnimations.init();
+    if (!webglContainer || !navbarRoot || !orbitalMorphRoot || !scrollRoot || !hudRoot || !modalsRoot) {
+        console.error('Missing root mount points in index.html');
+        return;
+    }
 
-    console.log('Foodlink está listo.');
+    // 1. Initialize UI Modals (Kitchen registration & 3D Inspect)
+    const modals = new Modals(modalsRoot);
 
-  } catch (error) {
-    console.error('Failed to initialize application:', error);
-  }
-};
+    // 2. Initialize 3D Scene Manager
+    const sceneManager = new SceneManager(webglContainer);
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', startApp);
-} else {
-  startApp();
+    // 3. Initialize Orbital Morph Layer
+    const orbitalMorphLayer = new OrbitalMorphLayer(orbitalMorphRoot);
+    sceneManager.morphController.setCardElements(orbitalMorphLayer.getCardElements());
+
+    // 4. Scroll Helper & Global Actions
+    const scrollToStage = (normalizedProgress: number): void => {
+        if (sceneManager.inspectMode) {
+            sceneManager.toggleInspect(false);
+            studioHUD.setInspectModeUI(false);
+        }
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        window.scrollTo({ top: maxScroll * normalizedProgress, behavior: 'smooth' });
+    };
+
+    (window as any).scrollToStage = scrollToStage;
+    (window as any).openJoinModal = (type = 'kitchen') => modals.open(type);
+    (window as any).closeJoinModal = () => modals.close();
+    (window as any).openLoginModal = () => {
+        const btn = document.getElementById('open-login-btn');
+        btn?.click();
+    };
+
+    // 5. Initialize Top Navbar
+    const navbar = new Navbar(navbarRoot, {
+        onStageSelect: (progress) => scrollToStage(progress),
+        onOpenRegisterModal: () => modals.open('kitchen')
+    });
+
+    // 6. Initialize Authentication Login / Register / Account Modal
+    if (loginModalRoot) {
+        initLoginModal(loginModalRoot);
+    }
+
+    // 7. Initialize Scroll Story Sections
+    new ScrollStory(scrollRoot, {
+        onOpenRegisterModal: () => modals.open('kitchen'),
+        onStageSelect: (progress) => scrollToStage(progress)
+    });
+
+    // 8. Initialize Studio HUD
+    const studioHUD = new StudioHUD(hudRoot, {
+        onRenderModeChange: (mode) => sceneManager.setRenderMode(mode),
+        onLightingMoodChange: (mood) => sceneManager.setLightingMood(mood),
+        onInspectToggle: () => sceneManager.toggleInspect(),
+        onInspectDishSelect: (idx) => sceneManager.setInspectDish(idx),
+        onExplodeChange: (val) => sceneManager.setManualExplode(val)
+    });
+
+    // Wire Telemetry from SceneManager to UI
+    sceneManager.onTelemetryUpdate = (telemetry) => {
+        studioHUD.updateHUD(telemetry);
+        navbar.setActiveStage(telemetry.stageIndex);
+        orbitalMorphLayer.updateCardContent(telemetry.stageIndex);
+    };
+
+    // 8. Smooth Scrolling with Lenis
+    const lenis = new Lenis({
+        duration: 1.2,
+        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        orientation: 'vertical',
+        smoothWheel: true
+    });
+
+    const updateScrollTarget = (): void => {
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        sceneManager.targetScroll = Math.max(0, Math.min(1, window.scrollY / maxScroll));
+    };
+
+    lenis.on('scroll', () => {
+        updateScrollTarget();
+    });
+
+    window.addEventListener('scroll', updateScrollTarget, { passive: true });
+    updateScrollTarget();
+
+    function raf(time: number): void {
+        lenis.raf(time);
+        requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+
+    // 9. Start Scene Render Loop
+    sceneManager.start();
 }
 
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initApp();
+} else {
+    window.addEventListener('DOMContentLoaded', initApp, { once: true });
+}

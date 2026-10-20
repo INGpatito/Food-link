@@ -9,53 +9,53 @@ export function initLoginModal(container: HTMLElement | null) {
   container.innerHTML = `
     <div
       id="login-modal"
-      class="fixed inset-0 z-[100] hidden modal-overlay flex items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300"
+      class="fixed inset-0 z-[100] hidden auth-overlay flex items-center justify-center p-4 sm:p-6 opacity-0 transition-opacity duration-300"
       role="presentation"
     >
-      <!-- Modal Box -->
+      <!-- Modal Box Dialog -->
       <div
         id="login-dialog"
-        class="relative w-full max-w-md overflow-hidden rounded-[2.25rem] border border-brand-1/15 bg-[#181512]/95 p-6 sm:p-8 shadow-[0_25px_70px_rgba(0,0,0,0.65),0_0_50px_rgba(232,106,51,0.12)] backdrop-blur-2xl transition-all duration-300 scale-95 opacity-0 flex flex-col gap-5"
+        class="auth-dialog transition-all duration-300 scale-95 opacity-0"
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-modal-title"
       >
         <!-- Ambient top glow inside card -->
-        <div class="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-36 rounded-full bg-brand-3/20 blur-3xl"></div>
+        <div class="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-72 h-36 rounded-full bg-[#E86A33]/15 blur-3xl"></div>
 
         <!-- Close Button (Top-Right) -->
         <button
           id="close-login-btn"
           type="button"
           aria-label="Cerrar ventana"
-          class="absolute top-6 right-6 z-20 h-9 w-9 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-brand-1/60 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all"
+          class="auth-close-btn"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
 
-        <!-- Header: Title & Subtitle -->
-        <div class="flex flex-col gap-1 z-10 pr-8">
-          <h3 id="auth-modal-title" class="font-display font-extrabold text-2xl sm:text-3xl uppercase tracking-tight text-white">
-            Bienvenido<span class="text-brand-3">.</span>
+        <!-- Header: Centered Brand Title & Subtitle Matching Reference -->
+        <div class="flex flex-col items-center text-center pt-1">
+          <h3 id="auth-modal-title" class="auth-header-title">
+            FOODLINK<span class="auth-header-dot">.</span>
           </h3>
-          <p id="auth-modal-desc" class="font-body text-xs sm:text-sm text-brand-1/70 leading-relaxed">
-            Accede a tu cuenta de Foodlink para disfrutar beneficios de comensal.
+          <p id="auth-modal-desc" class="auth-header-sub">
+            EXPERIENCIA GASTRONOMICA 3D
           </p>
         </div>
 
-        <!-- Segmented Tabs (Dinámico segun estado de sesion) -->
-        <div id="auth-tabs-bar" class="grid grid-cols-2 rounded-2xl bg-white/[0.05] p-1.5 border border-white/10 z-10" role="tablist" aria-label="Opciones de cuenta">
+        <!-- Segmented Tab Bar (Iniciar Sesión / Registrarse) -->
+        <div id="auth-tabs-bar" class="auth-tab-bar" role="tablist" aria-label="Opciones de cuenta">
           <button
             id="tab-login"
             role="tab"
             aria-selected="true"
             aria-controls="panel-login"
             tabindex="0"
-            class="auth-tab rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 bg-brand-4 text-white shadow-md shadow-brand-4/30"
+            class="auth-tab-btn is-active"
           >
-            Iniciar Sesión
+            INICIAR SESION
           </button>
           <button
             id="tab-register"
@@ -63,35 +63,35 @@ export function initLoginModal(container: HTMLElement | null) {
             aria-selected="false"
             aria-controls="panel-register"
             tabindex="-1"
-            class="auth-tab rounded-xl py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 text-brand-1/60 hover:text-white"
+            class="auth-tab-btn"
           >
-            Registrarse
+            REGISTRARSE
           </button>
         </div>
 
         <!-- Feedback Alert Bar -->
         <div
           id="auth-feedback"
-          class="hidden rounded-2xl border p-3 text-center font-body text-xs z-10 transition-all"
+          class="hidden auth-feedback-box"
           role="status"
           aria-live="polite"
         ></div>
 
         <!-- Forms Container -->
-        <div class="relative z-10">
+        <div class="relative z-10 w-full">
 
-          <!-- ─── Panel 1: Iniciar Sesión ─── -->
+          <!-- Panel 1: Iniciar Sesión -->
           <div id="panel-login" role="tabpanel" class="flex flex-col gap-4">
-            <form id="form-login" class="flex flex-col gap-4 font-body">
+            <form id="form-login" class="flex flex-col gap-4">
               <!-- Email input -->
-              <div class="flex flex-col gap-1.5">
-                <label for="login-email" class="text-[0.7rem] uppercase text-brand-1/70 font-bold tracking-widest">
+              <div class="auth-field">
+                <label for="login-email" class="auth-label">
                   Correo electrónico
                 </label>
-                <div class="relative flex items-center">
-                  <span class="absolute left-4 text-brand-1/40 pointer-events-none">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                <div class="auth-input-wrapper">
+                  <span class="auth-input-icon">
+                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </span>
                   <input
@@ -101,19 +101,19 @@ export function initLoginModal(container: HTMLElement | null) {
                     autocomplete="email"
                     required
                     placeholder="ejemplo@foodlink.com"
-                    class="w-full rounded-2xl border border-brand-1/15 bg-white/[0.04] py-3.5 pl-11 pr-4 text-sm text-brand-1 placeholder:text-brand-1/30 outline-none transition-all focus:border-brand-3 focus:bg-white/[0.07] focus:ring-2 focus:ring-brand-3/20"
+                    class="auth-input"
                   />
                 </div>
               </div>
 
               <!-- Password input -->
-              <div class="flex flex-col gap-1.5">
-                <div class="flex items-center justify-between text-[0.7rem] uppercase tracking-widest font-bold">
-                  <label for="login-password" class="text-brand-1/70">Contraseña</label>
-                </div>
-                <div class="relative flex items-center">
-                  <span class="absolute left-4 text-brand-1/40 pointer-events-none">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <div class="auth-field">
+                <label for="login-password" class="auth-label">
+                  Contraseña
+                </label>
+                <div class="auth-input-wrapper">
+                  <span class="auth-input-icon">
+                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </span>
@@ -124,19 +124,19 @@ export function initLoginModal(container: HTMLElement | null) {
                     autocomplete="current-password"
                     required
                     placeholder="••••••••"
-                    class="w-full rounded-2xl border border-brand-1/15 bg-white/[0.04] py-3.5 pl-11 pr-11 text-sm text-brand-1 placeholder:text-brand-1/30 outline-none transition-all focus:border-brand-3 focus:bg-white/[0.07] focus:ring-2 focus:ring-brand-3/20"
+                    class="auth-input"
                   />
                   <button
                     type="button"
-                    class="toggle-password-btn absolute right-3 p-1.5 text-brand-1/40 hover:text-brand-1 transition-colors"
+                    class="auth-password-toggle toggle-password-btn"
                     data-target="login-password"
                     aria-label="Mostrar u ocultar contraseña"
                   >
-                    <svg class="w-4 h-4 eye-open" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg class="w-4.5 h-4.5 eye-open" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
-                    <svg class="w-4 h-4 eye-closed hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg class="w-4.5 h-4.5 eye-closed hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
                     </svg>
                   </button>
@@ -147,35 +147,32 @@ export function initLoginModal(container: HTMLElement | null) {
               <button
                 id="btn-submit-login"
                 type="submit"
-                class="minimal-btn mt-2 w-full rounded-full border-brand-4 bg-brand-4 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-brand-4/25 hover:border-brand-3 hover:bg-brand-3 flex items-center justify-center gap-2"
+                class="auth-btn-primary mt-2"
               >
-                <span>Entrar a Foodlink</span>
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
+                <span>ENTRAR A FOODLINK</span>
               </button>
             </form>
 
             <!-- Switch to Register footer -->
-            <p class="text-center font-body text-xs text-brand-1/60 mt-1">
+            <p class="auth-footer-text">
               ¿No tienes una cuenta aún?
-              <button type="button" id="switch-to-register" class="font-bold text-brand-2 hover:text-brand-3 underline underline-offset-4 ml-1 transition-colors">
+              <button type="button" id="switch-to-register" class="auth-footer-link">
                 Regístrate gratis
               </button>
             </p>
           </div>
 
-          <!-- ─── Panel 2: Registrarse ─── -->
+          <!-- Panel 2: Registrarse -->
           <div id="panel-register" role="tabpanel" class="hidden flex-col gap-4">
-            <form id="form-register" class="flex flex-col gap-3.5 font-body">
+            <form id="form-register" class="flex flex-col gap-3.5">
               <!-- Name input -->
-              <div class="flex flex-col gap-1.5">
-                <label for="register-name" class="text-[0.7rem] uppercase text-brand-1/70 font-bold tracking-widest">
+              <div class="auth-field">
+                <label for="register-name" class="auth-label">
                   Nombre completo
                 </label>
-                <div class="relative flex items-center">
-                  <span class="absolute left-4 text-brand-1/40 pointer-events-none">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <div class="auth-input-wrapper">
+                  <span class="auth-input-icon">
+                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </span>
@@ -186,20 +183,20 @@ export function initLoginModal(container: HTMLElement | null) {
                     autocomplete="name"
                     required
                     placeholder="Nombre apellidos"
-                    class="w-full rounded-2xl border border-brand-1/15 bg-white/[0.04] py-3.5 pl-11 pr-4 text-sm text-brand-1 placeholder:text-brand-1/30 outline-none transition-all focus:border-brand-3 focus:bg-white/[0.07] focus:ring-2 focus:ring-brand-3/20"
+                    class="auth-input"
                   />
                 </div>
               </div>
 
               <!-- Email input -->
-              <div class="flex flex-col gap-1.5">
-                <label for="register-email" class="text-[0.7rem] uppercase text-brand-1/70 font-bold tracking-widest">
+              <div class="auth-field">
+                <label for="register-email" class="auth-label">
                   Correo electrónico
                 </label>
-                <div class="relative flex items-center">
-                  <span class="absolute left-4 text-brand-1/40 pointer-events-none">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                <div class="auth-input-wrapper">
+                  <span class="auth-input-icon">
+                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                   </span>
                   <input
@@ -209,19 +206,19 @@ export function initLoginModal(container: HTMLElement | null) {
                     autocomplete="email"
                     required
                     placeholder="tu@correo.com"
-                    class="w-full rounded-2xl border border-brand-1/15 bg-white/[0.04] py-3.5 pl-11 pr-4 text-sm text-brand-1 placeholder:text-brand-1/30 outline-none transition-all focus:border-brand-3 focus:bg-white/[0.07] focus:ring-2 focus:ring-brand-3/20"
+                    class="auth-input"
                   />
                 </div>
               </div>
 
               <!-- Password input -->
-              <div class="flex flex-col gap-1.5">
-                <label for="register-password" class="text-[0.7rem] uppercase text-brand-1/70 font-bold tracking-widest">
+              <div class="auth-field">
+                <label for="register-password" class="auth-label">
                   Contraseña (mínimo 8 caracteres)
                 </label>
-                <div class="relative flex items-center">
-                  <span class="absolute left-4 text-brand-1/40 pointer-events-none">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <div class="auth-input-wrapper">
+                  <span class="auth-input-icon">
+                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </span>
@@ -232,20 +229,20 @@ export function initLoginModal(container: HTMLElement | null) {
                     autocomplete="new-password"
                     required
                     minlength="8"
-                    placeholder="Mínimo 8 caracteres"
-                    class="w-full rounded-2xl border border-brand-1/15 bg-white/[0.04] py-3.5 pl-11 pr-11 text-sm text-brand-1 placeholder:text-brand-1/30 outline-none transition-all focus:border-brand-3 focus:bg-white/[0.07] focus:ring-2 focus:ring-brand-3/20"
+                    placeholder="••••••••"
+                    class="auth-input"
                   />
                   <button
                     type="button"
-                    class="toggle-password-btn absolute right-3 p-1.5 text-brand-1/40 hover:text-brand-1 transition-colors"
+                    class="auth-password-toggle toggle-password-btn"
                     data-target="register-password"
                     aria-label="Mostrar u ocultar contraseña"
                   >
-                    <svg class="w-4 h-4 eye-open" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg class="w-4.5 h-4.5 eye-open" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                     </svg>
-                    <svg class="w-4 h-4 eye-closed hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg class="w-4.5 h-4.5 eye-closed hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
                     </svg>
                   </button>
@@ -256,35 +253,33 @@ export function initLoginModal(container: HTMLElement | null) {
               <button
                 id="btn-submit-register"
                 type="submit"
-                class="minimal-btn mt-1 w-full rounded-full border-brand-4 bg-brand-4 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-brand-4/25 hover:border-brand-3 hover:bg-brand-3 flex items-center justify-center gap-2"
+                class="auth-btn-primary mt-2"
               >
-                <span>Crear mi cuenta</span>
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
+                <span>CREAR MI CUENTA</span>
               </button>
             </form>
 
             <!-- Switch to Login footer -->
-            <p class="text-center font-body text-xs text-brand-1/60 mt-1">
+            <p class="auth-footer-text">
               ¿Ya tienes una cuenta registrada?
-              <button type="button" id="switch-to-login" class="font-bold text-brand-2 hover:text-brand-3 underline underline-offset-4 ml-1 transition-colors">
+              <button type="button" id="switch-to-login" class="auth-footer-link">
                 Inicia sesión aquí
               </button>
             </p>
           </div>
 
-          <!-- ─── Panel 3: Verificar Correo ─── -->
-          <div id="panel-verify" role="tabpanel" class="hidden flex-col gap-4 font-body">
-            <div class="rounded-2xl border border-brand-3/20 bg-brand-3/5 p-4 text-xs leading-relaxed text-brand-1/80 flex flex-col gap-2">
+          <!-- Panel 3: Verificar Correo -->
+          <div id="panel-verify" role="tabpanel" class="hidden flex-col gap-4">
+            <div class="rounded-2xl border border-[#E86A33]/25 bg-[#E86A33]/10 p-4 text-xs leading-relaxed text-[#B8AEA5] flex flex-col gap-1.5">
               <p>
                 Hemos enviado un código de verificación de 6 dígitos al correo:
-                <span id="verify-target-email" class="font-bold text-brand-2 block mt-0.5 break-all"></span>
+                <span id="verify-target-email" class="font-bold text-[#F29C38] block mt-1 break-all"></span>
+              </p>
             </div>
 
-            <form id="form-verify" class="flex flex-col gap-3.5">
-              <div class="flex flex-col gap-1.5">
-                <label for="verify-code-input" class="text-[0.7rem] uppercase text-brand-1/70 font-bold tracking-widest text-center">
+            <form id="form-verify" class="flex flex-col gap-4">
+              <div class="auth-field">
+                <label for="verify-code-input" class="auth-label text-center block">
                   Código de 6 dígitos
                 </label>
                 <input
@@ -295,58 +290,57 @@ export function initLoginModal(container: HTMLElement | null) {
                   maxlength="6"
                   required
                   placeholder="123456"
-                  class="w-full text-center tracking-[0.4em] font-mono text-xl font-bold rounded-2xl border border-brand-1/15 bg-white/[0.04] py-3.5 px-4 text-brand-1 placeholder:text-brand-1/20 outline-none transition-all focus:border-brand-3 focus:bg-white/[0.07] focus:ring-2 focus:ring-brand-3/20"
+                  class="auth-code-input"
                 />
               </div>
 
               <button
                 id="btn-submit-verify"
                 type="submit"
-                class="minimal-btn mt-1 w-full rounded-full border-brand-4 bg-brand-4 py-3.5 text-sm font-bold uppercase tracking-wider text-white shadow-lg shadow-brand-4/25 hover:border-brand-3 hover:bg-brand-3 flex items-center justify-center gap-2"
+                class="auth-btn-primary"
               >
-                <span>Confirmar y acceder</span>
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
+                <span>CONFIRMAR Y ACCEDER</span>
               </button>
             </form>
 
-            <div class="flex items-center justify-between text-xs text-brand-1/60 pt-1">
-              <button type="button" id="btn-resend-code" class="text-brand-2 hover:text-brand-3 transition-colors font-medium underline underline-offset-4">
-                Reenviar nuevo código
+            <div class="flex items-center justify-between text-xs text-[#B8AEA5] pt-1">
+              <button type="button" id="btn-resend-code" class="text-[#F29C38] hover:text-[#E86A33] transition-colors font-bold underline underline-offset-4">
+                Reenviar código
               </button>
-              <button type="button" id="btn-back-to-login" class="hover:text-brand-1 transition-colors">
+              <button type="button" id="btn-back-to-login" class="hover:text-white transition-colors">
                 Volver a inicio
               </button>
             </div>
           </div>
 
-          <!-- ─── Panel 4: Mi Cuenta / Estado Autenticado ("Siguiente pestaña") ─── -->
-          <div id="panel-account" role="tabpanel" class="hidden flex-col gap-4 font-body">
+          <!-- Panel 4: Mi Cuenta / Estado Autenticado -->
+          <div id="panel-account" role="tabpanel" class="hidden flex-col gap-5">
             <!-- User Profile Summary Box -->
-            <div class="rounded-2xl border border-white/10 bg-white/[0.04] p-4 flex flex-col gap-3">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                  <div class="h-10 w-10 rounded-full bg-brand-4/30 border border-brand-4/40 flex items-center justify-center font-display font-bold text-brand-2 text-sm">
-                    <span id="account-avatar-initial">U</span>
-                  </div>
-                  <div class="flex flex-col">
-                    <span id="account-user-name" class="font-bold text-sm text-white">Usuario</span>
-                    <span id="account-user-email" class="text-xs text-brand-1/60">correo@ejemplo.com</span>
-                  </div>
-                </div>
-                <div id="account-verified-badge" class="px-2.5 py-1 rounded-full text-[0.65rem] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                  Verificado
-                </div>
+            <div class="rounded-2xl border border-white/10 bg-white/[0.04] p-5 flex flex-col items-center text-center gap-3">
+              <div class="auth-avatar-circle">
+                <span id="account-avatar-initial">U</span>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <h4 id="account-user-name" class="font-black text-2xl text-white">Usuario</h4>
+                <span id="account-user-email" class="text-xs text-[#B8AEA5]">correo@ejemplo.com</span>
+              </div>
+
+              <div id="account-verified-badge" class="mt-1">
+                <span class="auth-badge-verified">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  VERIFICADO
+                </span>
               </div>
 
               <!-- Pending verification alert banner if not verified yet -->
-              <div id="account-unverified-warning" class="hidden rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200 flex flex-col gap-2">
-                <span>Tu correo aun no ha sido verificado.</span>
+              <div id="account-unverified-warning" class="hidden w-full rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200 flex flex-col gap-2">
+                <span>Tu correo aún no ha sido verificado.</span>
                 <button
                   id="btn-goto-verify-from-account"
                   type="button"
-                  class="self-start text-[0.72rem] font-bold text-amber-300 underline underline-offset-4 hover:text-white"
+                  class="self-center text-xs font-bold text-[#F29C38] underline underline-offset-4 hover:text-white"
                 >
                   Ingresar código de verificación ahora
                 </button>
@@ -355,36 +349,39 @@ export function initLoginModal(container: HTMLElement | null) {
 
             <!-- Exclusive Member Services / Perks -->
             <div class="flex flex-col gap-2">
-              <span class="text-[0.7rem] uppercase text-brand-1/60 font-bold tracking-widest">
-                Beneficios de comensal activo
+              <span class="text-[10px] uppercase text-[#857A70] font-bold tracking-[0.15em]">
+                BENEFICIOS DE COMENSAL ACTIVO
               </span>
-              <div class="grid grid-cols-2 gap-2 text-xs">
-                <div class="rounded-xl border border-white/5 bg-white/[0.02] p-3 flex flex-col gap-1">
-                  <span class="font-bold text-brand-2">Seguridad</span>
-                  <span class="text-[0.72rem] text-brand-1/60">Tus datos están seguros en nuestro sitio.</span>
+              <div class="grid grid-cols-2 gap-2.5 text-xs">
+                <div class="auth-perk-card">
+                  <span class="font-bold text-[#F29C38]">Seguridad</span>
+                  <span class="text-[11px] text-[#B8AEA5] leading-snug">Tus datos están protegidos en nuestro sitio.</span>
                 </div>
-                <div class="rounded-xl border border-white/5 bg-white/[0.02] p-3 flex flex-col gap-1">
-                  <span class="font-bold text-brand-2">Favoritos 3D</span>
-                  <span class="text-[0.72rem] text-brand-1/60">Guarda platillos y personaliza recetas.</span>
+                <div class="auth-perk-card">
+                  <span class="font-bold text-[#F29C38]">Favoritos 3D</span>
+                  <span class="text-[11px] text-[#B8AEA5] leading-snug">Guarda platillos y personaliza recetas.</span>
                 </div>
               </div>
             </div>
 
             <!-- Action buttons -->
-            <div class="flex flex-col gap-2 pt-2">
+            <div class="flex flex-col gap-2.5 pt-1">
               <button
                 id="btn-close-account"
                 type="button"
-                class="minimal-btn w-full rounded-full border-brand-4 bg-brand-4 py-3 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-brand-4/25 hover:border-brand-3 hover:bg-brand-3 flex items-center justify-center gap-2"
+                class="auth-btn-primary"
               >
-                <span>Continuar explorando Foodlink</span>
+                <span>CONTINUAR EN FOODLINK</span>
               </button>
               <button
                 id="btn-logout"
                 type="button"
-                class="w-full rounded-full border border-white/10 bg-white/5 py-2.5 text-xs font-bold uppercase tracking-wider text-brand-1/70 hover:text-white hover:bg-white/10 transition-colors"
+                class="auth-btn-secondary"
               >
-                Cerrar sesión
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span>CERRAR SESION</span>
               </button>
             </div>
           </div>
@@ -452,14 +449,14 @@ export function initLoginModal(container: HTMLElement | null) {
   const showFeedback = (message: string, type: 'error' | 'success' | 'info' = 'info') => {
     if (!authFeedback) return;
     authFeedback.textContent = message;
-    authFeedback.className = 'rounded-2xl border p-3 text-center font-body text-xs z-10 transition-all';
+    authFeedback.className = 'auth-feedback-box';
 
     if (type === 'error') {
-      authFeedback.classList.add('border-red-500/40', 'bg-red-500/10', 'text-red-200');
+      authFeedback.classList.add('is-error');
     } else if (type === 'success') {
-      authFeedback.classList.add('border-emerald-500/40', 'bg-emerald-500/10', 'text-emerald-200');
+      authFeedback.classList.add('is-success');
     } else {
-      authFeedback.classList.add('border-brand-2/30', 'bg-brand-2/10', 'text-brand-1');
+      authFeedback.classList.add('is-info');
     }
     authFeedback.classList.remove('hidden');
   };
@@ -481,37 +478,33 @@ export function initLoginModal(container: HTMLElement | null) {
 
     if (activeTab === 'login') {
       authTabsBar?.classList.remove('hidden');
-      tabLogin?.classList.add('bg-brand-4', 'text-white', 'shadow-md', 'shadow-brand-4/30');
-      tabLogin?.classList.remove('text-brand-1/60');
+      tabLogin?.classList.add('is-active');
       tabLogin?.setAttribute('aria-selected', 'true');
 
-      tabRegister?.classList.remove('bg-brand-4', 'text-white', 'shadow-md', 'shadow-brand-4/30');
-      tabRegister?.classList.add('text-brand-1/60');
+      tabRegister?.classList.remove('is-active');
       tabRegister?.setAttribute('aria-selected', 'false');
 
-      if (authTitle) authTitle.innerHTML = 'Bienvenido<span class="text-brand-3">.</span>';
-      if (authDesc) authDesc.textContent = 'Accede a tu cuenta de Foodlink para disfrutar beneficios de comensal.';
+      if (authTitle) authTitle.innerHTML = 'FOODLINK<span class="auth-header-dot">.</span>';
+      if (authDesc) authDesc.textContent = 'EXPERIENCIA GASTRONOMICA 3D';
 
       panelLogin?.classList.remove('hidden');
       loginEmailInput?.focus();
     } else if (activeTab === 'register') {
       authTabsBar?.classList.remove('hidden');
-      tabRegister?.classList.add('bg-brand-4', 'text-white', 'shadow-md', 'shadow-brand-4/30');
-      tabRegister?.classList.remove('text-brand-1/60');
+      tabRegister?.classList.add('is-active');
       tabRegister?.setAttribute('aria-selected', 'true');
 
-      tabLogin?.classList.remove('bg-brand-4', 'text-white', 'shadow-md', 'shadow-brand-4/30');
-      tabLogin?.classList.add('text-brand-1/60');
+      tabLogin?.classList.remove('is-active');
       tabLogin?.setAttribute('aria-selected', 'false');
 
-      if (authTitle) authTitle.innerHTML = 'Registro<span class="text-brand-3">.</span>';
-      if (authDesc) authDesc.textContent = 'Crea tu cuenta de comensal para guardar favoritos y pedidos.';
+      if (authTitle) authTitle.innerHTML = 'FOODLINK<span class="auth-header-dot">.</span>';
+      if (authDesc) authDesc.textContent = 'REGISTRO DE COMENSAL 3D';
 
       panelRegister?.classList.remove('hidden');
       registerNameInput?.focus();
     } else if (activeTab === 'verify') {
       authTabsBar?.classList.add('hidden');
-      if (authTitle) authTitle.innerHTML = 'Verificación<span class="text-brand-3">.</span>';
+      if (authTitle) authTitle.innerHTML = 'Verificación<span class="auth-header-dot">.</span>';
       if (authDesc) authDesc.textContent = 'Ingresa el código para confirmar tu cuenta y acceder.';
 
       if (verifyTargetEmail) verifyTargetEmail.textContent = pendingEmail;
@@ -521,7 +514,7 @@ export function initLoginModal(container: HTMLElement | null) {
       authTabsBar?.classList.add('hidden');
       const currentUser = getStoredUser();
 
-      if (authTitle) authTitle.innerHTML = 'Mi Cuenta<span class="text-brand-3">.</span>';
+      if (authTitle) authTitle.innerHTML = 'Mi Cuenta<span class="auth-header-dot">.</span>';
       if (authDesc) {
         authDesc.textContent = '';
         authDesc.classList.add('hidden');
