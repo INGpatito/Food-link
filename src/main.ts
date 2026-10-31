@@ -39,7 +39,10 @@ function initApp(): void {
 
     // 3. Initialize Orbital Morph Layer
     const orbitalMorphLayer = new OrbitalMorphLayer(orbitalMorphRoot);
-    sceneManager.morphController.setCardElements(orbitalMorphLayer.getCardElements());
+    sceneManager.morphController.setCardElements(
+        orbitalMorphLayer.getCardElements(),
+        orbitalMorphLayer.getLeaderElements()
+    );
 
     // 4. Scroll Helper & Global Actions
     const scrollToStage = (normalizedProgress: number): void => {
@@ -89,7 +92,9 @@ function initApp(): void {
     sceneManager.onTelemetryUpdate = (telemetry) => {
         studioHUD.updateHUD(telemetry);
         navbar.setActiveStage(telemetry.stageIndex);
-        orbitalMorphLayer.updateCardContent(telemetry.stageIndex);
+        if (orbitalMorphLayer.updateCardContent(telemetry.stageIndex)) {
+            sceneManager.morphController.measureCardHeights();
+        }
     };
 
     // 8. Smooth Scrolling with Lenis

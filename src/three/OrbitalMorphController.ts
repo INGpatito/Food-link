@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import type { LeaderLineElements } from '../ui/OrbitalMorphLayer.ts';
 
 export interface MorphCardState {
     x: number;
@@ -12,9 +13,25 @@ export interface ScreenCoord {
     y: number;
 }
 
+const RING_QUADRANT_ANGLES = [
+    Math.PI + 0.52, // Card 0: Upper-Left (Back-Left arc of golden ring)
+    Math.PI - 0.48, // Card 1: Lower-Left (Front-Left arc of golden ring)
+    -0.52,          // Card 2: Upper-Right (Back-Right arc of golden ring)
+    0.48            // Card 3: Lower-Right (Front-Right arc of golden ring)
+];
+
+/**
+ * Sequential Z-reading order stagger ranks:
+ * Card 0 (Top-Left) -> Rank 0 (1st)
+ * Card 2 (Top-Right) -> Rank 1 (2nd)
+ * Card 1 (Bottom-Left) -> Rank 2 (3rd)
+ * Card 3 (Bottom-Right) -> Rank 3 (4th)
+ */
+const STAGGER_RANKS = [0, 2, 1, 3];
+
 /**
  * 3D-to-2D screen coordinate projection and orbital morph controller.
- * Bridges Three.js rotating ring nodes with DOM HUD cards.
+ * Bridges Three.js rotating ring nodes with DOM HUD cards and SVG leader lines.
  * Zero emojis strictly enforced.
  */
 export class OrbitalMorphController {
@@ -22,9 +39,13 @@ export class OrbitalMorphController {
     private orbitalRingGroup: THREE.Group;
     private orbitNodes: THREE.Mesh[];
     private cardElements: (HTMLElement | null)[] = [];
+    private leaderElements: LeaderLineElements[] = [];
     private onSyncTexts?: (stageIndex: number) => void;
 
     private _morphProjVec = new THREE.Vector3();
+    private _ringProjVec = new THREE.Vector3();
+    private _masterSettleProgress = 1.0;
+
     public morphCardState: MorphCardState[] = [
         { x: 0, y: 0, progress: 1.0, isCard: true },
         { x: 0, y: 0, progress: 1.0, isCard: true },
@@ -46,6 +67,18 @@ export class OrbitalMorphController {
         { x: 0, y: 0 }
     ];
 
+    private _ringAnchors2D: ScreenCoord[] = [
+        { x: 0, y: 0 },
+        { x: 0, y: 0 },
+        { x: 0, y: 0 },
+        { x: 0, y: 0 }
+    ];
+
+    private _currentCardWidth = 330;
+    private _cardHeights = [206, 206, 206, 206];
+    private _lastViewportW = 0;
+    private _lastViewportH = 0;
+
     constructor(
         camera: THREE.PerspectiveCamera,
         orbitalRingGroup: THREE.Group,
@@ -62,9 +95,28 @@ export class OrbitalMorphController {
         this.initAnchors();
     }
 
-    public setCardElements(elements: (HTMLElement | null)[]): void {
+    public setCardElements(
+        elements: (HTMLElement | null)[],
+        leaders?: LeaderLineElements[]
+    ): void {
         this.cardElements = elements;
+        if (leaders) {
+            this.leaderElements = leaders;
+        }
         this.initAnchors();
+        this.measureCardHeights();
+    }
+
+    public measureCardHeights(): void {
+        for (let i = 0; i < 4; i++) {
+            const el = this.cardElements[i];
+            if (el && this.morphCardState[i]?.isCard) {
+                const h = el.offsetHeight;
+                if (h > 40) {
+                    this._cardHeights[i] = h;
+                }
+            }
+        }
     }
 
     public updateEditorialAnchors(): ScreenCoord[] {
@@ -75,7 +127,8 @@ export class OrbitalMorphController {
         const isShort = h < 550;
 
         if (isMobile) {
-            const cardWidth = Math.min(215, Math.max(140, Math.floor(w * 0.5 - 16)));
+            const cardWidth = Math.min(220, Math.max(148, Math.floor(w * 0.5 - 16)));
+            this._currentCardWidth = cardWidth;
             const leftX = 10;
             const rightX = Math.max(10, w - cardWidth - 10);
             const topY = isShort ? Math.max(48, Math.round(h * 0.08)) : Math.max(68, Math.round(h * 0.12));
@@ -96,7 +149,8 @@ export class OrbitalMorphController {
             this._editorialAnchors[3].x = rightX;
             this._editorialAnchors[3].y = bottomY;
         } else if (isTablet) {
-            const cardWidth = 275;
+            const cardWidth = 290;
+            this._currentCardWidth = cardWidth;
             const sideMargin = Math.max(16, Math.round(w * 0.035));
             const topY = isShort ? Math.max(52, Math.round(h * 0.10)) : Math.max(78, Math.round(h * 0.14));
             const minCardGap = isShort ? Math.max(120, Math.round((h - topY - 140) * 0.5 + 70)) : 210;
@@ -117,7 +171,8 @@ export class OrbitalMorphController {
             this._editorialAnchors[3].x = rightX;
             this._editorialAnchors[3].y = bottomY;
         } else {
-            const cardWidth = 310;
+            const cardWidth = 330;
+            this._currentCardWidth = cardWidth;
             const sideMargin = Math.max(32, Math.round(w * 0.045));
             const topY = isShort ? Math.max(56, Math.round(h * 0.10)) : Math.max(86, Math.round(h * 0.15));
             const minCardGap = isShort ? Math.max(125, Math.round((h - topY - 145) * 0.5 + 75)) : 225;
@@ -143,6 +198,7 @@ export class OrbitalMorphController {
 
     private initAnchors(): void {
         this.updateEditorialAnchors();
+        this._masterSettleProgress = 1.0;
         for (let i = 0; i < 4; i++) {
             this.morphCardState[i].x = this._editorialAnchors[i].x;
             this.morphCardState[i].y = this._editorialAnchors[i].y;
@@ -176,12 +232,35 @@ export class OrbitalMorphController {
         const w = window.innerWidth;
         const h = window.innerHeight;
 
+        if (w !== this._lastViewportW || h !== this._lastViewportH) {
+            this._lastViewportW = w;
+            this._lastViewportH = h;
+            this.measureCardHeights();
+        }
+
         // 1. Project 4 orbitNodes from 3D to 2D Screen Space
         for (let i = 0; i < 4; i++) {
             this.orbitNodes[i].getWorldPosition(this._morphProjVec);
             this._morphProjVec.project(this.camera);
-            this._orbPositions[i].x = (this._morphProjVec.x * 0.5 + 0.5) * w - 8;
-            this._orbPositions[i].y = (-this._morphProjVec.y * 0.5 + 0.5) * h - 8;
+            this._orbPositions[i].x = (this._morphProjVec.x * 0.5 + 0.5) * w - 7;
+            this._orbPositions[i].y = (-this._morphProjVec.y * 0.5 + 0.5) * h - 7;
+        }
+
+        // 1b. Project 4 quadrant anchor points on the 3D golden ring
+        const masterGroup = this.orbitalRingGroup.parent?.parent;
+        const totalRotY = (masterGroup ? masterGroup.rotation.y : 0) + this.orbitalRingGroup.rotation.y;
+
+        for (let i = 0; i < 4; i++) {
+            const localAngle = RING_QUADRANT_ANGLES[i] + totalRotY;
+            this._ringProjVec.set(
+                Math.cos(localAngle) * 2.72,
+                0.04,
+                Math.sin(localAngle) * 2.72
+            );
+            this.orbitalRingGroup.localToWorld(this._ringProjVec);
+            this._ringProjVec.project(this.camera);
+            this._ringAnchors2D[i].x = (this._ringProjVec.x * 0.5 + 0.5) * w;
+            this._ringAnchors2D[i].y = (-this._ringProjVec.y * 0.5 + 0.5) * h;
         }
 
         // 2. Editorial Anchors
@@ -214,18 +293,42 @@ export class OrbitalMorphController {
             this.onSyncTexts(stageIndex);
         }
 
-        // 4. Smooth Interpolation
+        // 4. Smooth Interpolation with Organic Z-Stagger
         const targetProgress = isSettled ? 1.0 : 0.0;
-        const pSpeed = isSettled ? 0.08 : 0.14;
+        const showLeaders = w > 640 && !isInspectMode;
+
+        if (isSettled) {
+            this._masterSettleProgress = this.lerp(this._masterSettleProgress, 1.0, 0.08);
+            if (Math.abs(this._masterSettleProgress - 1.0) < 0.001) {
+                this._masterSettleProgress = 1.0;
+            }
+        } else {
+            this._masterSettleProgress = this.lerp(this._masterSettleProgress, 0.0, 0.18);
+            if (this._masterSettleProgress < 0.001) {
+                this._masterSettleProgress = 0.0;
+            }
+        }
 
         for (let i = 0; i < 4; i++) {
             const cardEl = this.cardElements[i];
             const cState = this.morphCardState[i];
             if (!cardEl) continue;
 
-            cState.progress = this.lerp(cState.progress, targetProgress, pSpeed);
-            if (Math.abs(cState.progress - targetProgress) < 0.001) {
-                cState.progress = targetProgress;
+            if (targetProgress === 1.0) {
+                const rank = STAGGER_RANKS[i];
+                const rankStart = rank * 0.085;
+                const rankDur = 0.72;
+                const cardTarget = Math.min(1.0, Math.max(0.0, (this._masterSettleProgress - rankStart) / rankDur));
+                cState.progress = this.lerp(cState.progress, cardTarget, 0.35);
+                if (Math.abs(cState.progress - cardTarget) < 0.001) {
+                    cState.progress = cardTarget;
+                }
+            } else {
+                // Collapsing during scroll: swift, responsive collapse back into orbiting dots
+                cState.progress = this.lerp(cState.progress, 0.0, 0.22);
+                if (cState.progress < 0.001) {
+                    cState.progress = 0.0;
+                }
             }
 
             // S-curve easing
@@ -246,12 +349,68 @@ export class OrbitalMorphController {
                     cState.isCard = true;
                     cardEl.classList.remove('is-dot');
                     cardEl.classList.add('is-card');
+                    this.measureCardHeights();
                 }
             } else {
                 if (cState.isCard) {
                     cState.isCard = false;
                     cardEl.classList.remove('is-card');
                     cardEl.classList.add('is-dot');
+                }
+            }
+
+            // 5. Update SVG Architectural Leader Line
+            const leader = this.leaderElements[i];
+            if (leader && leader.group && leader.path && leader.tick && leader.ring) {
+                if (!showLeaders || cState.progress <= 0.55) {
+                    leader.group.style.opacity = '0';
+                } else {
+                    const rawReveal = Math.min(1.0, Math.max(0.0, (cState.progress - 0.55) / 0.45));
+                    const reveal = rawReveal * rawReveal * (3 - 2 * rawReveal);
+
+                    const isLeft = i < 2;
+                    const dir = isLeft ? 1 : -1;
+                    const startX = isLeft ? (cState.x + this._currentCardWidth) : cState.x;
+                    const startY = cState.y + this._cardHeights[i] * 0.5;
+
+                    const ringX = this._ringAnchors2D[i].x;
+                    const ringY = this._ringAnchors2D[i].y;
+
+                    const spanX = Math.abs(ringX - startX);
+                    const stubLen = Math.min(44, Math.max(16, spanX * 0.25));
+                    const elbowX = startX + dir * stubLen;
+                    const elbowY = startY;
+
+                    const vx = ringX - elbowX;
+                    const vy = ringY - elbowY;
+                    const diagLen = Math.hypot(vx, vy);
+
+                    let d: string;
+                    if (diagLen > 2) {
+                        const ux = vx / diagLen;
+                        const uy = vy / diagLen;
+                        const cornerR = Math.min(14, stubLen * 0.45, diagLen * 0.25);
+                        const p1x = elbowX - dir * cornerR;
+                        const p1y = elbowY;
+                        const p2x = elbowX + ux * cornerR;
+                        const p2y = elbowY + uy * cornerR;
+                        d = `M ${startX.toFixed(1)} ${startY.toFixed(1)} L ${p1x.toFixed(1)} ${p1y.toFixed(1)} Q ${elbowX.toFixed(1)} ${elbowY.toFixed(1)} ${p2x.toFixed(1)} ${p2y.toFixed(1)} L ${ringX.toFixed(1)} ${ringY.toFixed(1)}`;
+                    } else {
+                        d = `M ${startX.toFixed(1)} ${startY.toFixed(1)} L ${ringX.toFixed(1)} ${ringY.toFixed(1)}`;
+                    }
+
+                    leader.path.setAttribute('d', d);
+                    leader.path.style.strokeDashoffset = (1.0 - reveal).toFixed(3);
+
+                    leader.tick.setAttribute('x1', startX.toFixed(1));
+                    leader.tick.setAttribute('y1', (startY - 6).toFixed(1));
+                    leader.tick.setAttribute('x2', startX.toFixed(1));
+                    leader.tick.setAttribute('y2', (startY + 6).toFixed(1));
+
+                    leader.ring.setAttribute('cx', ringX.toFixed(1));
+                    leader.ring.setAttribute('cy', ringY.toFixed(1));
+
+                    leader.group.style.opacity = (reveal * 0.92).toFixed(3);
                 }
             }
         }

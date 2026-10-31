@@ -126,13 +126,22 @@ export const DISH_CARD_DATA: DishContent[] = [
     }
 ];
 
+export interface LeaderLineElements {
+    group: SVGGElement | null;
+    path: SVGPathElement | null;
+    tick: SVGLineElement | null;
+    ring: SVGCircleElement | null;
+}
+
 /**
- * Renders and synchronizes the 4 hybrid 3D-to-screen HUD cards.
+ * Renders and synchronizes the 4 hybrid 3D-to-screen HUD cards
+ * and their architectural SVG leader lines to the 3D golden ring.
  * Zero emojis strictly enforced.
  */
 export class OrbitalMorphLayer {
     private container: HTMLElement;
     private cardElements: (HTMLElement | null)[] = [];
+    private leaderElements: LeaderLineElements[] = [];
 
     private mc0Tag: HTMLElement | null = null;
     private mc0Title: HTMLElement | null = null;
@@ -160,9 +169,47 @@ export class OrbitalMorphLayer {
 
     public render(): void {
         this.container.innerHTML = `
+            <!-- Architectural SVG Leader Lines connecting cards to the 3D golden ring -->
+            <svg id="orbital-leader-svg" class="orbital-leader-svg" aria-hidden="true">
+                <defs>
+                    <linearGradient id="leader-grad-left" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#f4a261" stop-opacity="0.52" />
+                        <stop offset="55%" stop-color="#f4a261" stop-opacity="0.18" />
+                        <stop offset="100%" stop-color="#e05a36" stop-opacity="0.62" />
+                    </linearGradient>
+                    <linearGradient id="leader-grad-right" x1="100%" y1="0%" x2="0%" y2="0%">
+                        <stop offset="0%" stop-color="#f4a261" stop-opacity="0.52" />
+                        <stop offset="55%" stop-color="#f4a261" stop-opacity="0.18" />
+                        <stop offset="100%" stop-color="#e05a36" stop-opacity="0.62" />
+                    </linearGradient>
+                </defs>
+                <g id="leader-group-0" class="orbital-leader-group">
+                    <path id="leader-path-0" class="orbital-leader-path" stroke="url(#leader-grad-left)" pathLength="1" />
+                    <line id="leader-tick-0" class="orbital-leader-tick" />
+                    <circle id="leader-ring-0" class="orbital-leader-ring" r="2.75" />
+                </g>
+                <g id="leader-group-1" class="orbital-leader-group">
+                    <path id="leader-path-1" class="orbital-leader-path" stroke="url(#leader-grad-left)" pathLength="1" />
+                    <line id="leader-tick-1" class="orbital-leader-tick" />
+                    <circle id="leader-ring-1" class="orbital-leader-ring" r="2.75" />
+                </g>
+                <g id="leader-group-2" class="orbital-leader-group">
+                    <path id="leader-path-2" class="orbital-leader-path" stroke="url(#leader-grad-right)" pathLength="1" />
+                    <line id="leader-tick-2" class="orbital-leader-tick" />
+                    <circle id="leader-ring-2" class="orbital-leader-ring" r="2.75" />
+                </g>
+                <g id="leader-group-3" class="orbital-leader-group">
+                    <path id="leader-path-3" class="orbital-leader-path" stroke="url(#leader-grad-right)" pathLength="1" />
+                    <line id="leader-tick-3" class="orbital-leader-tick" />
+                    <circle id="leader-ring-3" class="orbital-leader-ring" r="2.75" />
+                </g>
+            </svg>
+
             <!-- Card 0: Superior Izquierda / Propuesta Gastronomica Central -->
             <article id="morph-card-0" class="orbital-morph-card is-card interactive-el" aria-label="Propuesta gastronomica central del platillo activo">
                 <div class="morph-dot-beacon" aria-hidden="true"></div>
+                <div class="mc-spotlight" aria-hidden="true"></div>
+                <div class="mc-spotlight-glow" aria-hidden="true"></div>
                 <span class="mc-corner mc-corner--tl" aria-hidden="true"></span>
                 <span class="mc-corner mc-corner--tr" aria-hidden="true"></span>
                 <span class="mc-corner mc-corner--bl" aria-hidden="true"></span>
@@ -187,6 +234,8 @@ export class OrbitalMorphLayer {
             <!-- Card 1: Inferior Izquierda / Filosofia Artesanal y Cero Desperdicio -->
             <article id="morph-card-1" class="orbital-morph-card is-card interactive-el" aria-label="Filosofia artesanal, oficio y compromiso cero desperdicio">
                 <div class="morph-dot-beacon" aria-hidden="true"></div>
+                <div class="mc-spotlight" aria-hidden="true"></div>
+                <div class="mc-spotlight-glow" aria-hidden="true"></div>
                 <span class="mc-corner mc-corner--tl" aria-hidden="true"></span>
                 <span class="mc-corner mc-corner--tr" aria-hidden="true"></span>
                 <span class="mc-corner mc-corner--bl" aria-hidden="true"></span>
@@ -211,6 +260,8 @@ export class OrbitalMorphLayer {
             <!-- Card 2: Superior Derecha / Ingredientes de Proximidad, Tecnica y Origen -->
             <article id="morph-card-2" class="orbital-morph-card is-card interactive-el" aria-label="Ingredientes de proximidad, tecnica y origen">
                 <div class="morph-dot-beacon" aria-hidden="true"></div>
+                <div class="mc-spotlight" aria-hidden="true"></div>
+                <div class="mc-spotlight-glow" aria-hidden="true"></div>
                 <span class="mc-corner mc-corner--tl" aria-hidden="true"></span>
                 <span class="mc-corner mc-corner--tr" aria-hidden="true"></span>
                 <span class="mc-corner mc-corner--bl" aria-hidden="true"></span>
@@ -235,6 +286,8 @@ export class OrbitalMorphLayer {
             <!-- Card 3: Inferior Derecha / Metricas de Aprovechamiento, Lote del Dia y Trazabilidad -->
             <article id="morph-card-3" class="orbital-morph-card is-card interactive-el" aria-label="Metricas de aprovechamiento, lote del dia y trazabilidad">
                 <div class="morph-dot-beacon" aria-hidden="true"></div>
+                <div class="mc-spotlight" aria-hidden="true"></div>
+                <div class="mc-spotlight-glow" aria-hidden="true"></div>
                 <span class="mc-corner mc-corner--tl" aria-hidden="true"></span>
                 <span class="mc-corner mc-corner--tr" aria-hidden="true"></span>
                 <span class="mc-corner mc-corner--bl" aria-hidden="true"></span>
@@ -264,6 +317,40 @@ export class OrbitalMorphLayer {
             this.container.querySelector('#morph-card-3')
         ];
 
+        this.leaderElements = [0, 1, 2, 3].map((i) => ({
+            group: this.container.querySelector<SVGGElement>(`#leader-group-${i}`),
+            path: this.container.querySelector<SVGPathElement>(`#leader-path-${i}`),
+            tick: this.container.querySelector<SVGLineElement>(`#leader-tick-${i}`),
+            ring: this.container.querySelector<SVGCircleElement>(`#leader-ring-${i}`)
+        }));
+
+        this.cardElements.forEach((cardEl, idx) => {
+            if (!cardEl) return;
+            const leaderGroup = this.leaderElements[idx]?.group;
+            if (leaderGroup) {
+                cardEl.addEventListener('mouseenter', () => {
+                    leaderGroup.classList.add('is-hovered');
+                });
+                cardEl.addEventListener('mouseleave', () => {
+                    leaderGroup.classList.remove('is-hovered');
+                });
+            }
+
+            // Spotlight Hover cursor tracking (luxury glass border & sheen)
+            cardEl.addEventListener('pointermove', (e: PointerEvent) => {
+                const rect = cardEl.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                cardEl.style.setProperty('--mouse-x', `${x.toFixed(1)}px`);
+                cardEl.style.setProperty('--mouse-y', `${y.toFixed(1)}px`);
+            });
+
+            cardEl.addEventListener('pointerleave', () => {
+                cardEl.style.removeProperty('--mouse-x');
+                cardEl.style.removeProperty('--mouse-y');
+            });
+        });
+
         this.mc0Tag = this.container.querySelector('#mc0-tag');
         this.mc0Title = this.container.querySelector('#mc0-title');
         this.mc0Desc = this.container.querySelector('#mc0-desc');
@@ -288,12 +375,16 @@ export class OrbitalMorphLayer {
         return this.cardElements;
     }
 
-    public updateCardContent(stageIndex: number): void {
-        if (stageIndex === this.lastStageIndex) return;
+    public getLeaderElements(): LeaderLineElements[] {
+        return this.leaderElements;
+    }
+
+    public updateCardContent(stageIndex: number): boolean {
+        if (stageIndex === this.lastStageIndex) return false;
         this.lastStageIndex = stageIndex;
 
         const data = DISH_CARD_DATA[stageIndex];
-        if (!data) return;
+        if (!data) return false;
 
         if (this.mc0Tag) this.mc0Tag.textContent = data.card0.tag;
         if (this.mc0Title) this.mc0Title.textContent = data.card0.title;
@@ -311,6 +402,7 @@ export class OrbitalMorphLayer {
         if (this.mc3MetricV) this.mc3MetricV.textContent = data.card3.metricValue;
         if (this.mc3Title) this.mc3Title.textContent = data.card3.title;
         if (this.mc3Desc) this.mc3Desc.textContent = data.card3.desc;
+        return true;
     }
 
     public show(): void {

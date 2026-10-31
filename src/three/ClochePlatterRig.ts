@@ -277,13 +277,13 @@ export class ClochePlatterRig {
                 opacity: 0.85
             }),
             orbitNodeGlow: new THREE.MeshPhysicalMaterial({
-                color: 0x38bdf8,
-                metalness: 0.1,
-                roughness: 0.1,
-                emissive: 0x0284c7,
-                emissiveIntensity: 2.5,
+                color: 0xf4a261,
+                metalness: 0.35,
+                roughness: 0.14,
+                emissive: 0xe05a36,
+                emissiveIntensity: 1.85,
                 transparent: true,
-                opacity: 0.90
+                opacity: 0.92
             }),
             crystalGlass: new THREE.MeshPhysicalMaterial({
                 color: 0xefe5d8,

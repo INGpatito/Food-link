@@ -23,7 +23,7 @@ export class ScrollAnimations {
   private lenis!: Lenis;
   private sceneManager: SceneManager;
 
-  constructor(sceneManager: SceneManager) {
+  constructor(sceneManager: SceneManager) {2
     this.sceneManager = sceneManager;
   }
 
