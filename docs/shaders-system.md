@@ -1,78 +1,83 @@
-# Sistema de Shaders y Renderizado Visual
+# Sistema de Shaders, Iluminacion de Estudio y Perfiles de GPU
 
-Este documento detalla la arquitectura de shaders personalizados implementada en Foodlink para dotar a los modelos 3D y al entorno de una estetica organica, apetitosa y de alta fidelidad, eliminando el aspecto plano o plastico de los materiales basicos.
-
----
-
-## 1. Arquitectura General del Sistema
-
-El pipeline visual opera sobre el canvas WebGL transparente integrado con la interfaz HTML:
-
-1. **Material Enhancer Shader (Nivel de Geometria/Material):** Inyeccion directa en los materiales PBR de cada platillo (`MeshStandardMaterial` y `MeshPhysicalMaterial`) mediante `onBeforeCompile`, calculando Subsurface Scattering (SSS) en la penumbra, resplandor Fresnel aterciopelado en la silueta y control de micro-rugosidad.
-2. **Culinary Particles Shader (Nivel de Ambiente Volumetrico):** Sistema de particulas con calculo en GPU de corrientes de conveccion helicoidal, dispersion de especias flotantes (sesamo tostado, hierbas, azucar glass), atenuacion de tamano en perspectiva y respuesta elastica al cursor.
-3. **Iluminacion Calida de Estudio (Lighting Setup):** Esquema de iluminacion calibrado con luz principal cenital a 45 grados, luz de relleno calida y luz ambiental balanceada para acentuar el volumen tridimensional.
-4. **Integracion Transparente:** El renderizador WebGL opera con canal alfa completo y mapeo tonal ACES Filmic (`ACESFilmicToneMapping`), garantizando que la tipografia, los gradientes editoriales CSS del fondo y los controles interactivos se mantengan nitidos y legibles.
+Este documento detalla la arquitectura de shaders personalizados, texturas procedurales PBR, efectos atmosfericos y niveles de renderizado adaptativo implementados en Foodlink para dotar a los alimentos y al pedestal de una estetica organica, apetitosa y cinematografica.
 
 ---
 
-## 2. Material Enhancer Shader
+## 1. Arquitectura General del Pipeline Visual
 
-Archivo: `src/three/shaders/MaterialEnhancerShader.ts`
+El pipeline de renderizado en [`src/three/SceneManager.ts`](file:///home/pato/footlink/src/three/SceneManager.ts) combina cinco subsistemas principales:
+
+1. **Material Enhancer Shader (`FoodDishManager.ts` / `MaterialEnhancerShader.ts`):** Inyeccion GLSL en materiales PBR (`MeshStandardMaterial` y `MeshPhysicalMaterial`) mediante `onBeforeCompile`, calculando Subsurface Scattering (SSS) en la penumbra, resplandor Fresnel perimetral y micro-grano organico.
+2. **Texturas PBR Procedurales de Corte (`FoodCapTextures.ts`):** Generacion dinamica de mapas `CanvasTexture` de alta resolucion (`1024x1024`) con canales `map`, `bumpMap` y `roughness` personalizados para sellar solidamente cada capa del despiece de la hamburguesa.
+3. **Efectos Atmosfericos y Rayos Volumetricos (`AtmosphericFX.ts` + `VolumetricRaysShader.ts`):** Particulas doradas en suspension, vapor culinario ascendente desde el plato y haces de luz volumetrica (God-Rays) detras del pedestal.
+4. **Iluminacion de Estudio Dinamica (`StudioLighting.ts`):** Rig de 9 fuentes de luz (Ambiental, Hemisferica, Key, Fill, Rim, Spot cenital, Core Glow, Under-Platter y Cursor Light) con 4 presets de platillo y 3 modos cromaticos seleccionables en el HUD (`Terracotta`, `Emerald`, `Studio`).
+5. **Post-Procesado y Perfiles de GPU (`EffectComposer` + `GPUDetector.ts`):** Pipeline con `RenderPass`, `UnrealBloomPass`, `rayTracingPass` (GI screen-space, reflexiones especulares de piso y dispersion cromatica sutil) y `OutputPass` con mapeo tonal `ACESFilmicToneMapping`.
+
+---
+
+## 2. Material Enhancer Shader (Superficies Culinarias)
+
+Archivos: [`src/three/FoodDishManager.ts`](file:///home/pato/footlink/src/three/FoodDishManager.ts) y [`src/three/shaders/MaterialEnhancerShader.ts`](file:///home/pato/footlink/src/three/shaders/MaterialEnhancerShader.ts)
 
 ### Problema Tecnico Resuelto
-Los modelos 3D de alimentos suelen presentar reflejos especulares blancos y concentrados que simulan plastico rigido o juguetes. En la comida real (panecillos horneados, carne sellada, queso fundido, vegetales frescos):
-- La luz penetra levemente en las capas externas y se dispersa (dispersion subsuperficial / SSS).
-- Las superficies tienen micro-rugosidad porosa en lugar de brillo especular de espejo.
-- Los bordes capturan un fino halo de dispersion aterciopelada (Fresnel).
+Los modelos 3D estandar suelen presentar brillos especulares rigidos que recuerdan al plastico. En alimentos reales (pan brioche horneado, carne sellada, queso cheddar fundido, hojas frescas):
+- La luz penetra levemente en las capas superficiales y se dispersa en el terminador de sombra (Subsurface Scattering / SSS).
+- Las superficies poseen micro-porosidad natural y un lustre humedo focalizado (`moisture`).
+- Los contornos capturan un fino halo aterciopelado (Fresnel).
 
 ### Implementacion GLSL
-El shader inyecta calculos matematicos en los bloques `<common>` y `<dithering_fragment>` del compilador de Three.js:
+El shader inyecta calculos en `<common>`, `<begin_vertex>` y `<dithering_fragment>`:
 
-- **Subsurface Scattering en la Penumbra:**
-  Se calcula la zona de transicion donde la luz directa pasa a la sombra (el terminador) y se modula con el color base real de la textura (`gl_FragColor.rgb`), enriqueciendo los ingredientes sin manchar ni desteñir los colores originales:
+- **Subsurface Scattering (SSS) en la Penumbra:**
+  Calcula la transicion luz-sombra (`foodPenumbra`) y la modula con el color base de la textura y `uFoodSssColor`:
   ```glsl
-  vec3 foodKeyLight = normalize(vec3(0.5, 0.8, 0.6));
-  float foodNdotL = dot(geometryNormal, foodKeyLight);
-  float foodPenumbra = smoothstep(-0.25, 0.05, foodNdotL) * (1.0 - smoothstep(0.05, 0.40, foodNdotL));
-  vec3 foodSssGlow = gl_FragColor.rgb * uSssColor * (foodPenumbra * uSssIntensity * 0.35);
+  float foodNdotL = dot(N, keyDir);
+  float penumbra = smoothstep(-0.28, 0.08, foodNdotL) * (1.0 - smoothstep(0.08, 0.48, foodNdotL));
+  vec3 sssContrib = gl_FragColor.rgb * uFoodSssColor * (penumbra * uFoodSssIntensity);
   ```
-
-- **Velvet Fresnel Rim Sheen:**
-  Agrega un sutil halo aterciopelado en angulos rasantes respecto a la camara, acentuando el volumen perimetral del platillo:
-  ```glsl
-  float foodNdotV = clamp(dot(geometryNormal, geometryViewDir), 0.0, 1.0);
-  float foodFresnel = pow(1.0 - foodNdotV, uRimPower);
-  vec3 foodRimGlow = mix(gl_FragColor.rgb, uRimColor, 0.35) * (foodFresnel * uRimIntensity * 0.28);
-  ```
-
-- **Control de Micro-Rugosidad:**
-  Se ajusta la rugosidad base a valores organicos (`Math.max(material.roughness, 0.62)`) y metalicidad en cero, eliminando reflejos plasticos duros.
-
-- **Lustre Especular Focalizado:**
-  Calcula un micro-brillo especular enfocado con un vector medio (Half-Vector), imitando la reflexion de humedad o grasa natural de alimentos recien preparados.
-
-### Calibraciones por Seccion
-- **Hero (Hamburguesa):** Tono ambar dorado para corteza tostada y cheddar fundido.
-- **Features (Pizza):** Resplandor calido para salsa de tomate horneada y mozzarella.
-- **Salad (Ensalada Italiana):** Dispersion verde fresca para hojas y vegetales crujientes.
-- **Menu (Pastel de Celebracion):** Halo frambuesa/violeta sutil para glaseados y bayas.
-- **Extra (Tacos / Chocolate):** Tono caramelo y cacao para postres.
+- **Fresnel Rim Sheen y Lustre Humedo:**
+  Agrega un contorno suave dependiente del angulo de vision (`NdotV`) y un destello especular de humedad (`specGlaze`) controlado por `uFoodMoisture`.
+- **Calibracion por Etapa (`FOOD_SHADER_CONFIGS`):**
+  - `hero` (Hamburguesa): Calidez ambar tostada (`#d49a72`).
+  - `features` (Pizza): Tono terracota horneado (`#c98868`).
+  - `salad` (Ensalada): Dispersion verde clorofila (`#7c946c`).
+  - `menu` / `extra` (Pastel y Chocolate): Matices frambuesa y cacao (`#bf9eb2` / `#b3846c`).
 
 ---
 
-## 3. Culinary Particles Shader
+## 3. Texturas PBR de Seccion Transversal (`FoodCapTextures.ts`)
 
-Archivo: `src/three/shaders/CulinaryParticlesShader.ts`
+Archivo: [`src/three/FoodCapTextures.ts`](file:///home/pato/footlink/src/three/FoodCapTextures.ts)
 
-- **Geometria Instanciada:** 180 puntos distribuidos en el volumen que rodea a los platillos.
-- **Conveccion Helicoidal:** Las particulas experimentan un movimiento ascendente continuo combinado con un vortice sinusoidal que simula especias finas (sesamo, hojuelas de oregano, azucar glass, chispas doradas) suspendidas en el vapor caliente.
-- **Disipacion por Cursor:** Al pasar el raton cerca de una particula, esta sufre una fuerza de repulsion normalizada suave.
-- **Atenuacion de Punto (Point Size Attenuation):** La escala varia de forma inversamente proporcional a la distancia Z de la camara, integrando el campo de profundidad visual.
+Cuando [`LayeredFoodModel.ts`](file:///home/pato/footlink/src/three/LayeredFoodModel.ts) segmenta la hamburguesa en 6 capas, las superficies internas de corte reciben materiales `MeshStandardMaterial` con texturas generadas proceduralmente en memoria (sin peso extra de descarga):
+
+- **Pan Brioche (`bottom_bun`, `top_bun`):** Miga dorada con nubes de densidad de masa, anillo de sellado en mantequilla y 480 alveolos de fermentacion con relieve (`bumpScale: 0.015`).
+- **Medallon Angus (`patty`):** Textura carnica tostada con grano grueso, marmoleo de grasa, motas de pimienta y marcas de parrilla (`bumpScale: 0.024`).
+- **Queso Fundido (`cheese`):** Superficie cremosa de cheddar con pliegues suaves y acabado satinado (`roughness: 0.28`).
+- **Tomate de Huerta (`tomato`):** Anillo exterior de pulpa rubi, columela carnosa, 4 camaras loculares de gel y semillas color ambar dispuestas radialmente.
+- **Hojas de Huerta (`lettuce`):** Verde esmeralda con nervaduras blancas ramificadas desde el tallo central.
 
 ---
 
-## 4. Rendimiento y Compatibilidad
+## 4. Efectos Atmosfericos y Rayos Volumetricos (`AtmosphericFX.ts`)
 
-- **60 FPS Estables:** Todos los calculos matematicos complejos se ejecutan en GPU; no hay bucles pesados en CPU durante el bucle de animacion.
-- **Carga Prioritaria:** El modelo 3D inicial de la seccion visible se carga inmediatamente; los modelos restantes se predescargan en segundo plano de forma no bloqueante.
-- **Preservacion de Accesibilidad y Diseno:** El canvas WebGL se mantiene como capa transparente con `pointer-events: none`, asegurando que la tipografia, botones, formularios de inicio de sesion y fondos editoriales CSS permanezcan perfectamente nitidos e interactivos.
+Archivos: [`src/three/AtmosphericFX.ts`](file:///home/pato/footlink/src/three/AtmosphericFX.ts), [`src/three/shaders/VolumetricRaysShader.ts`](file:///home/pato/footlink/src/three/shaders/VolumetricRaysShader.ts) y [`src/three/shaders/CulinaryParticlesShader.ts`](file:///home/pato/footlink/src/three/shaders/CulinaryParticlesShader.ts)
+
+- **Particulas Doradas y Polvo de Fondo:** Dos sistemas `THREE.Points` (170 particulas principales + 65 de profundidad) con mezcla aditiva (`AdditiveBlending`) que orbitan suavemente alrededor del pedestal.
+- **Vapor Culinario Ascendente (`steamSystem`):** 55 particulas sobre la montura del plato que ascienden con oscilacion helicoidal y aumentan su intensidad cuando se levanta la campana (`clocheLift`).
+- **Rayos Volumetricos (`VolumetricRaysShader`):** Plano de fondo con shader procedural que proyecta haces de luz diagonales suaves cuyo color e intensidad se adaptan automaticamente a cada etapa del menu.
+
+---
+
+## 5. Deteccion de GPU y Perfiles de Calidad (`GPUDetector.ts` + `StudioHUD.ts`)
+
+Archivos: [`src/three/GPUDetector.ts`](file:///home/pato/footlink/src/three/GPUDetector.ts) y [`src/three/SceneManager.ts`](file:///home/pato/footlink/src/three/SceneManager.ts)
+
+Al iniciar, `GPUDetector` inspecciona la extension `WEBGL_debug_renderer_info` para identificar la tarjeta grafica (por ejemplo, NVIDIA RTX, Apple Silicon Serie M, Radeon RX o graficos integrados) y configura uno de los **3 niveles de renderizado**, los cuales tambien pueden cambiarse manualmente en cualquier momento desde el panel inferior (`StudioHUD`):
+
+| Perfil en HUD | Clave (`TierName`) | Pixel Ratio | Sombras y Luces | Post-Procesado (`EffectComposer`) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Performance** | `performance` | `1.0` | Sombras desactivadas, luces secundarias simplificadas | Desactivado (render directo ultraligero para 60 FPS en graficos integrados/moviles). |
+| **Standard** | `standard` | Hasta `1.5` | Sombras `PCFSoftShadowMap` (`1024x1024`), rig completo | `RenderPass` + `UnrealBloomPass` + `OutputPass`. |
+| **Raytracing RTX** | `raytracing` | Hasta `2.0` | Sombras de alta resolucion (`2048x2048`), reflexion fisica completa en campana | Activa `rayTracingPass` (oclusion ambiental direccional, rebote GI calido, reflejo especular de piso y aberracion cromatica sutil) + `UnrealBloomPass`. |

@@ -71,6 +71,12 @@ function initApp(): void {
     // 6. Initialize Authentication Login / Register / Account Modal
     if (loginModalRoot) {
         initLoginModal(loginModalRoot);
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('login') === '1') {
+            window.setTimeout(() => {
+                (window as any).openLoginModal?.();
+            }, 120);
+        }
     }
 
     // 7. Initialize Scroll Story Sections

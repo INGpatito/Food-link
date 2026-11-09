@@ -234,6 +234,7 @@
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    text-decoration: none;
     color: #ffffff;
     background: linear-gradient(135deg, #E86A33 0%, #B83A1B 100%);
     border: 1px solid rgba(255, 255, 255, 0.18);

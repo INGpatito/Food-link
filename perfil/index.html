@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0c0b">
+    <meta name="description" content="Mi Perfil en Foodlink: gestiona tus pedidos con código QR, consulta tu impacto ecológico, locales favoritos y el panel de tu negocio.">
+    <title>Mi Perfil | FOODLINK</title>
+    <link rel="stylesheet" href="/src/styles/perfil.css">
+</head>
+<body class="pf-body">
+    <div class="pf-app" id="pf-app">
+        <!-- Barra superior -->
+        <header class="pf-topbar">
+            <a href="/" class="pf-brand" aria-label="Volver al inicio de Foodlink">
+                <span class="pf-brand-ring" data-icon="cloche"></span>
+                <div class="pf-brand-copy">
+                    <span class="pf-brand-text">FOODLINK<span class="pf-dot">.</span></span>
+                    <span class="pf-brand-sub">PERFIL Y CENTRO DE RESCATE</span>
+                </div>
+            </a>
+
+            <div class="pf-topbar-actions">
+                <a href="/explorar/" class="pf-btn pf-btn--ghost pf-btn--sm">
+                    <span data-icon="map"></span>
+                    <span>Explorar mapa</span>
+                </a>
+                <a href="/" class="pf-btn pf-btn--subtle pf-btn--sm">
+                    <span>Inicio 3D</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- Contenedor principal -->
+        <div class="pf-layout">
+            <!-- Columna izquierda: Resumen de usuario y navegacion de pestañas -->
+            <aside class="pf-sidebar" aria-label="Menú de perfil">
+                <div class="pf-user-card" id="pf-user-card"></div>
+                <nav class="pf-nav" id="pf-nav" aria-label="Secciones de tu perfil"></nav>
+            </aside>
+
+            <!-- Columna derecha: Contenido activo de la seccion -->
+            <main class="pf-main" id="pf-main" aria-live="polite"></main>
+        </div>
+
+        <div class="pf-toast" id="pf-toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <script type="module" src="/src/perfil/main.ts"></script>
+</body>
+</html>

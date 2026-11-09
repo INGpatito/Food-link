@@ -63,16 +63,21 @@ export class Modals {
                         </div>
 
                         <div id="form-feedback" class="hidden p-3.5 rounded-xl bg-sage/20 border border-sage/40 text-sage font-mono text-xs">
-                            SOLICITUD REGISTRADA EXITOSAMENTE. NUESTRO EQUIPO SE PONDRA EN CONTACTO EN MENOS DE 24 HORAS PARA ACTIVAR TU ESTABLECIMIENTO.
+                            ESTABLECIMIENTO LISTO. REDIRIGIENDO AL PANEL DE GESTION Y PUBLICACION DE OFERTAS...
                         </div>
 
-                        <div class="pt-2 flex items-center justify-end gap-3">
-                            <button type="button" id="modal-cancel-btn" class="px-5 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider text-cream/70 hover:text-cream">
-                                CANCELAR
-                            </button>
-                            <button type="submit" class="px-6 py-3 rounded-xl bg-terracotta hover:bg-saffron text-obsidian font-display font-bold text-xs uppercase tracking-wider transition-colors">
-                                REGISTRAR ESTABLECIMIENTO
-                            </button>
+                        <div class="pt-2 flex items-center justify-between gap-3">
+                            <a href="/explorar/?tab=negocio" class="font-mono text-[11px] uppercase tracking-wider text-saffron hover:underline">
+                                ABRIR PANEL DE NEGOCIO
+                            </a>
+                            <div class="flex items-center gap-3">
+                                <button type="button" id="modal-cancel-btn" class="px-5 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider text-cream/70 hover:text-cream">
+                                    CANCELAR
+                                </button>
+                                <button type="submit" class="px-6 py-3 rounded-xl bg-terracotta hover:bg-saffron text-obsidian font-display font-bold text-xs uppercase tracking-wider transition-colors">
+                                    REGISTRAR ESTABLECIMIENTO
+                                </button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -120,11 +125,7 @@ export class Modals {
             this.formFeedback.classList.remove('hidden');
         }
         setTimeout(() => {
-            if (this.formFeedback) {
-                this.formFeedback.classList.add('hidden');
-            }
-            this.formEl?.reset();
-            this.close();
-        }, 2400);
+            window.location.href = '/explorar/?tab=negocio';
+        }, 1200);
     }
 }

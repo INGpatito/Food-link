@@ -366,12 +366,24 @@ export function initLoginModal(container: HTMLElement | null) {
 
             <!-- Action buttons -->
             <div class="flex flex-col gap-2.5 pt-1">
+              <a
+                href="/explorar/"
+                class="auth-btn-primary text-center flex items-center justify-center"
+              >
+                <span>EXPLORAR MAPA DE RESCATE</span>
+              </a>
+              <a
+                href="/perfil/"
+                class="auth-btn-secondary text-center flex items-center justify-center"
+              >
+                <span>IR A MI PERFIL Y PEDIDOS QR</span>
+              </a>
               <button
                 id="btn-close-account"
                 type="button"
-                class="auth-btn-primary"
+                class="auth-btn-secondary"
               >
-                <span>CONTINUAR EN FOODLINK</span>
+                <span>CONTINUAR EN INICIO 3D</span>
               </button>
               <button
                 id="btn-logout"

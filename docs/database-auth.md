@@ -1,6 +1,6 @@
-# Base de Datos y Autenticacion
+# Base de Datos, Autenticacion y Modales de Plataforma
 
-Este documento describe la arquitectura del sistema de acceso unificado de Foodlink, la conexion con la base de datos MySQL en la Orange Pi, los endpoints de la API REST y el servicio de confirmacion de cuentas mediante EmailJS.
+Este documento describe la arquitectura del sistema de acceso unificado de Foodlink, la conexion con la base de datos MySQL en la Orange Pi 4 Pro, los endpoints de la API REST, el servicio de confirmacion de cuentas mediante EmailJS y los modales interactivos de la plataforma.
 
 ---
 
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 ## 2. Endpoints de la API REST
 
-Los endpoints estan disponibles tanto en el entorno de desarrollo local como en el servidor de produccion en `https://papoys.me/api/auth/`:
+Los endpoints estan disponibles tanto en el entorno de desarrollo local ([`server/authPlugin.ts`](file:///home/pato/footlink/server/authPlugin.ts)) como en el servidor de produccion ([`server/standalone.mjs`](file:///home/pato/footlink/server/standalone.mjs)) en `https://papoys.me/api/auth/`:
 
 ### Registro de usuario
 - **Ruta:** `POST /api/auth/register`
@@ -65,9 +65,9 @@ Los endpoints estan disponibles tanto en el entorno de desarrollo local como en 
 
 ## 3. Servicio de Correo (EmailJS)
 
-El envio de correos de confirmacion se gestiona en `src/services/emailService.ts` utilizando la libreria `@emailjs/browser`:
+El envio de correos de confirmacion se gestiona en [`src/services/emailService.ts`](file:///home/pato/footlink/src/services/emailService.ts) utilizando la libreria `@emailjs/browser`:
 
-- **Plantilla HTML personalizada:** Ubicada en `docs/email-template.html`. Presenta un diseno oscuro calido acorde a la identidad de Foodlink, con tarjeta de codigo monoespaciado de facil lectura.
+- **Plantilla HTML personalizada:** Ubicada en [`docs/email-template.html`](file:///home/pato/footlink/docs/email-template.html). Presenta un diseno oscuro calido acorde a la identidad de Foodlink, con tarjeta de codigo monoespaciado de facil lectura.
 - **Variables de entorno requeridas:**
   - `VITE_EMAILJS_SERVICE_ID`: Identificador del servicio de correo conectado.
   - `VITE_EMAILJS_TEMPLATE_ID`: Identificador de la plantilla en el panel de EmailJS.
@@ -76,10 +76,21 @@ El envio de correos de confirmacion se gestiona en `src/services/emailService.ts
 
 ---
 
-## 4. Integracion Unificada: Web y Android
+## 4. Modales de Interfaz Web (`LoginModal.ts` y `Modals.ts`)
+
+1. **Modal de Autenticacion de Comensales ([`src/ui/LoginModal.ts`](file:///home/pato/footlink/src/ui/LoginModal.ts)):**
+   - Permite alternar entre **Iniciar Sesion**, **Crear Cuenta**, **Verificacion de Codigo de 6 Digitos** y vista de **Mi Cuenta** (cuando el usuario tiene sesion activa).
+   - Incluye ventanas modales dedicadas para consultar los **Terminos y Condiciones** y la **Politica de Privacidad** sin abandonar el flujo de registro.
+2. **Modal de Registro de Cocinas y Productores ([`src/ui/Modals.ts`](file:///home/pato/footlink/src/ui/Modals.ts)):**
+   - Accesible desde la barra de navegacion (`Registrar Cocina`) y desde el cierre del recorrido narrativo.
+   - Permite a cocinas de autor, restaurantes y productores artesanales postularse a la red gastronomica indicando nombre del proyecto, especialidad culinaria, ubicacion y correo de contacto.
+
+---
+
+## 5. Integracion Unificada: Web y Android
 
 1. **Credenciales compartidas:** Un usuario que se registre en la pagina web (`https://papoys.me`) puede iniciar sesion inmediatamente en la aplicacion movil Android, y viceversa.
 2. **Acceso universal:** La aplicacion Android consume `https://papoys.me/api/auth/`, garantizando funcionamiento sin importar a que red Wi-Fi o red celular este conectado el dispositivo.
 3. **Persistencia local:**
-   - En la web, la sesion se guarda en `localStorage` bajo la clave `foodlink_user`.
+   - En la web, la sesion se guarda en `localStorage` bajo la clave `foodlink_user` mediante [`src/utils/auth.ts`](file:///home/pato/footlink/src/utils/auth.ts).
    - En Android, la sesion se persiste mediante `SharedPreferences` en `SessionManager.kt`.

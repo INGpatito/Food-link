@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="theme-color" content="#111513">
+    <meta name="description" content="Encuentra comida rescatada cerca de ti: fondas, panaderías y restaurantes que venden más barato o regalan lo que les sobra.">
+    <title>Explorar comida cerca | FOODLINK</title>
+    <link rel="stylesheet" href="/src/styles/explorar.css">
+</head>
+<body class="fx-body">
+    <div class="fx-app" id="fx-app">
+        <!-- Barra superior -->
+        <header class="fx-topbar">
+            <a href="/" class="fx-brand" aria-label="Volver al inicio de Foodlink">
+                <span class="fx-brand-ring" data-icon="cloche"></span>
+                <span class="fx-brand-text">FOODLINK<span class="fx-dot">.</span></span>
+            </a>
+
+            <form class="fx-search" id="fx-search-form" role="search" autocomplete="off">
+                <span class="fx-search-icon" data-icon="search"></span>
+                <input id="fx-search-input" type="search" placeholder="Busca tu colonia, calle o ciudad" aria-label="Buscar dirección" enterkeyhint="search">
+                <ul class="fx-search-results" id="fx-search-results" role="listbox" hidden></ul>
+            </form>
+
+            <button type="button" class="fx-icon-btn fx-locate-btn" id="fx-locate-btn" aria-label="Activar o desactivar GPS" title="Activar o desactivar GPS">
+                <span data-icon="locate"></span>
+            </button>
+
+            <a href="/perfil/" class="fx-user" id="fx-user" title="Ir a Mi Perfil, Pedidos QR, Impacto y Negocio">
+                <span data-icon="user"></span>
+                <span id="fx-user-label">Mi Perfil</span>
+                <span class="fx-user-badge" id="fx-user-badge" hidden>0</span>
+            </a>
+        </header>
+
+        <!-- Mapa -->
+        <div id="fx-map" class="fx-map" aria-label="Mapa de lugares con comida rescatada"></div>
+
+        <!-- Buscar en esta zona al mover el mapa -->
+        <button type="button" class="fx-pill-btn fx-area-btn" id="fx-area-btn" hidden>
+            <span data-icon="search"></span> Buscar en esta zona
+        </button>
+
+        <!-- Controles flotantes del mapa (derecha) -->
+        <div class="fx-map-controls" id="fx-map-controls" aria-label="Controles del mapa">
+            <button type="button" class="fx-ctrl-btn fx-recenter-btn" id="fx-recenter-btn" aria-label="Centrar en mi ubicación" title="Centrar en mi ubicación">
+                <span data-icon="crosshair"></span>
+            </button>
+            <button type="button" class="fx-ctrl-btn fx-style-btn" id="fx-style-btn" aria-label="Cambiar estilo del mapa" title="Cambiar estilo del mapa (Oscuro / Calles / Satélite)">
+                <span data-icon="layers"></span>
+                <span class="fx-style-label" id="fx-style-label">Oscuro</span>
+            </button>
+            <div class="fx-zoom-group" role="group" aria-label="Zoom del mapa">
+                <button type="button" class="fx-ctrl-btn" id="fx-zoom-in" aria-label="Acercar mapa" title="Acercar">
+                    <span data-icon="plus"></span>
+                </button>
+                <button type="button" class="fx-ctrl-btn" id="fx-zoom-out" aria-label="Alejar mapa" title="Alejar">
+                    <span data-icon="minus"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Boton flotante movil para alternar Mapa / Lista rapidamente -->
+        <button type="button" class="fx-pill-btn fx-mobile-toggle" id="fx-mobile-toggle" aria-label="Alternar entre mapa y lista">
+            <span id="fx-mobile-toggle-icon" data-icon="map"></span>
+            <span id="fx-mobile-toggle-text">Ver mapa</span>
+        </button>
+
+        <!-- Panel lateral (escritorio) / hoja inferior deslizable (movil) -->
+        <aside class="fx-panel" id="fx-panel" data-sheet="half" aria-label="Resultados">
+            <button type="button" class="fx-sheet-handle" id="fx-sheet-handle" aria-label="Deslizar o tocar para expandir o contraer la lista">
+                <span class="fx-sheet-pill"></span>
+                <span class="fx-sheet-summary" id="fx-sheet-summary">Desliza para ver lugares</span>
+            </button>
+            <div class="fx-panel-body" id="fx-panel-body"></div>
+        </aside>
+
+        <!-- Banner de navegacion en vivo -->
+        <section class="fx-nav-banner" id="fx-nav-banner" hidden aria-live="polite"></section>
+
+        <div class="fx-toast" id="fx-toast" role="status" aria-live="polite"></div>
+    </div>
+
+    <script type="module" src="/src/explorar/main.ts"></script>
+</body>
+</html>

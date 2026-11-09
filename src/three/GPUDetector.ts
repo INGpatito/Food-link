@@ -42,7 +42,7 @@ export function detectGPUCapabilities(): HardwareInfo {
         } else if (
             /uhd|hd graphics|swiftshader|llvmpipe|softpipe|microsoft basic/i.test(nameLower) ||
             (typeof navigator !== 'undefined' && navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)
-        ) {
+        ) { 
             isLowEnd = true;
             tier = 'performance';
         } else {

@@ -179,7 +179,8 @@ body.inspect-mode #orbital-morph-layer {
         rgba(244, 162, 97, 0.5) 80%,
         transparent 100%
     );
-    opacity: 0.9;
+    /* Brightens slightly while the user scrolls (--mc-motion: 0..1) */
+    opacity: calc(0.75 + var(--mc-motion, 0) * 0.25);
     pointer-events: none;
 }
 
@@ -291,6 +292,49 @@ body.inspect-mode #orbital-morph-layer {
                 transform 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.04s,
                 max-height 0.42s cubic-bezier(0.16, 1, 0.3, 1),
                 padding 0.35s ease;
+}
+
+/* ---- IN-PLACE CONTENT SWAP (stage change) ----
+   Cards never disappear while scrolling: when the active dish changes,
+   the text quickly fades out and the new content cascades back in. */
+.orbital-card-inner > * {
+    transition: opacity 0.3s ease,
+                transform 0.42s cubic-bezier(0.16, 1, 0.3, 1),
+                filter 0.3s ease;
+}
+
+.orbital-card-inner > :nth-child(2) { transition-delay: 0.04s; }
+.orbital-card-inner > :nth-child(3) { transition-delay: 0.08s; }
+.orbital-card-inner > :nth-child(4) { transition-delay: 0.11s; }
+.orbital-card-inner > :nth-child(5) { transition-delay: 0.14s; }
+
+.orbital-morph-card.is-swapping .orbital-card-inner > * {
+    opacity: 0;
+    transform: translateY(-5px);
+    filter: blur(3px);
+    transition-duration: 0.16s;
+    transition-delay: 0s;
+}
+
+/* Accent sweep across the top bar when new content lands */
+.orbital-morph-card.is-card.is-refreshed::before {
+    animation: mcAccentSweep 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes mcAccentSweep {
+    0%   { transform: scaleX(0.15); opacity: 1; filter: brightness(1.6); }
+    100% { transform: scaleX(1);    filter: brightness(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .orbital-card-inner > *,
+    .orbital-morph-card.is-swapping .orbital-card-inner > * {
+        transform: none;
+        filter: none;
+    }
+    .orbital-morph-card.is-card.is-refreshed::before {
+        animation: none;
+    }
 }
 
 /* ---- TAG LINE (Chapter label + badge) ---- */

@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import com.example.foodlink.data.local.SessionManager
 import com.example.foodlink.data.model.User
 import com.example.foodlink.data.remote.AuthApi
+import com.example.foodlink.ui.main.FoodLinkHubScreen
 import com.example.foodlink.ui.theme.BrandAccent
 import com.example.foodlink.ui.theme.BrandCard
 import com.example.foodlink.ui.theme.BrandCardBorder
@@ -86,15 +87,29 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(sessionManager: SessionManager) {
-    var currentUser by remember { mutableStateOf(sessionManager.getUser()) }
+    val initialUser = remember {
+        val stored = sessionManager.getUser()
+        if (stored != null && stored.email == "invitado@foodlink.local") {
+            sessionManager.clearSession()
+            null
+        } else {
+            stored
+        }
+    }
+    var currentUser by remember { mutableStateOf(initialUser) }
 
-    // Si ya hay sesion iniciada, muestra la pantalla de bienvenida con "Hola, [nombre]"
+    // Solo muestra Explorar Mapa y Mi Perfil despues de iniciar sesion con una cuenta real
     if (currentUser != null) {
-        LoggedInWelcomeScreen(
+        FoodLinkHubScreen(
             user = currentUser!!,
             onLogout = {
                 sessionManager.clearSession()
                 currentUser = null
+            },
+            onUpdateUserName = { newName ->
+                val updated = currentUser!!.copy(name = newName)
+                sessionManager.saveUser(updated)
+                currentUser = updated
             }
         )
     } else {

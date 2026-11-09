@@ -42,9 +42,17 @@ export class OrbitalMorphController {
     private leaderElements: LeaderLineElements[] = [];
     private onSyncTexts?: (stageIndex: number) => void;
 
-    private _morphProjVec = new THREE.Vector3();
     private _ringProjVec = new THREE.Vector3();
-    private _masterSettleProgress = 1.0;
+
+    // Scroll-reactive drift state (cards stay readable; they only float slightly)
+    private _lastScroll = 0;
+    private _hasLastScroll = false;
+    private _scrollDrift = 0;
+    private _motionLevel = 0;
+    private _reducedMotion = typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    private _resizeObserver: ResizeObserver | null = null;
 
     public morphCardState: MorphCardState[] = [
         { x: 0, y: 0, progress: 1.0, isCard: true },
@@ -54,13 +62,6 @@ export class OrbitalMorphController {
     ];
 
     private _editorialAnchors: ScreenCoord[] = [
-        { x: 0, y: 0 },
-        { x: 0, y: 0 },
-        { x: 0, y: 0 },
-        { x: 0, y: 0 }
-    ];
-
-    private _orbPositions: ScreenCoord[] = [
         { x: 0, y: 0 },
         { x: 0, y: 0 },
         { x: 0, y: 0 },
@@ -105,6 +106,20 @@ export class OrbitalMorphController {
         }
         this.initAnchors();
         this.measureCardHeights();
+        this.observeCardHeights();
+    }
+
+    /**
+     * Keeps leader-line anchors aligned when a card's height changes
+     * (e.g. after an animated content swap) without forcing layout every frame.
+     */
+    private observeCardHeights(): void {
+        this._resizeObserver?.disconnect();
+        if (typeof ResizeObserver === 'undefined') return;
+        this._resizeObserver = new ResizeObserver(() => this.measureCardHeights());
+        for (const el of this.cardElements) {
+            if (el) this._resizeObserver.observe(el);
+        }
     }
 
     public measureCardHeights(): void {
@@ -198,7 +213,6 @@ export class OrbitalMorphController {
 
     private initAnchors(): void {
         this.updateEditorialAnchors();
-        this._masterSettleProgress = 1.0;
         for (let i = 0; i < 4; i++) {
             this.morphCardState[i].x = this._editorialAnchors[i].x;
             this.morphCardState[i].y = this._editorialAnchors[i].y;
@@ -238,15 +252,7 @@ export class OrbitalMorphController {
             this.measureCardHeights();
         }
 
-        // 1. Project 4 orbitNodes from 3D to 2D Screen Space
-        for (let i = 0; i < 4; i++) {
-            this.orbitNodes[i].getWorldPosition(this._morphProjVec);
-            this._morphProjVec.project(this.camera);
-            this._orbPositions[i].x = (this._morphProjVec.x * 0.5 + 0.5) * w - 7;
-            this._orbPositions[i].y = (-this._morphProjVec.y * 0.5 + 0.5) * h - 7;
-        }
-
-        // 1b. Project 4 quadrant anchor points on the 3D golden ring
+        // 1. Project 4 quadrant anchor points on the 3D golden ring
         const masterGroup = this.orbitalRingGroup.parent?.parent;
         const totalRotY = (masterGroup ? masterGroup.rotation.y : 0) + this.orbitalRingGroup.rotation.y;
 
@@ -277,96 +283,66 @@ export class OrbitalMorphController {
             stageIndex = inspectDishIndex;
         }
 
-        // Crossfade intervals
-        const inDishTransition = (
-            (s >= 0.18 && s <= 0.28) ||
-            (s >= 0.48 && s <= 0.58) ||
-            (s >= 0.78 && s <= 0.88)
-        );
-
-        const VELOCITY_THRESHOLD = 0.0035;
-        const isScrolling = inDishTransition ? (scrollVelocity > 0.0006) : (scrollVelocity >= VELOCITY_THRESHOLD);
-        const isSettled = isInspectMode || !isScrolling;
-
-        // Synchronize texts safely
-        if (this.onSyncTexts && (!this.morphCardState[0].isCard || isSettled)) {
+        // Synchronize texts (content swaps are animated in place by the layer,
+        // so cards never need to collapse while the user scrolls)
+        if (this.onSyncTexts) {
             this.onSyncTexts(stageIndex);
         }
 
-        // 4. Smooth Interpolation with Organic Z-Stagger
-        const targetProgress = isSettled ? 1.0 : 0.0;
-        const showLeaders = w > 640 && !isInspectMode;
+        // 4. Scroll-reactive drift: cards stay fully readable at all times and
+        //    only float a few pixels against the scroll direction for depth.
+        const signedDelta = this._hasLastScroll ? (s - this._lastScroll) : 0;
+        this._lastScroll = s;
+        this._hasLastScroll = true;
+        const maxDrift = w <= 640 ? 4 : 9;
+        const targetDrift = this._reducedMotion
+            ? 0
+            : Math.max(-maxDrift, Math.min(maxDrift, -signedDelta * 1800));
+        this._scrollDrift = this.lerp(this._scrollDrift, targetDrift, 0.12);
+        if (Math.abs(this._scrollDrift) < 0.01) this._scrollDrift = 0;
 
-        if (isSettled) {
-            this._masterSettleProgress = this.lerp(this._masterSettleProgress, 1.0, 0.08);
-            if (Math.abs(this._masterSettleProgress - 1.0) < 0.001) {
-                this._masterSettleProgress = 1.0;
-            }
-        } else {
-            this._masterSettleProgress = this.lerp(this._masterSettleProgress, 0.0, 0.18);
-            if (this._masterSettleProgress < 0.001) {
-                this._masterSettleProgress = 0.0;
-            }
-        }
+        // Subtle velocity-driven emphasis (never hides content)
+        const motion = Math.min(1, scrollVelocity / 0.02);
+        this._motionLevel = this.lerp(this._motionLevel, motion, 0.1);
+
+        const showLeaders = w > 640 && !isInspectMode;
 
         for (let i = 0; i < 4; i++) {
             const cardEl = this.cardElements[i];
             const cState = this.morphCardState[i];
             if (!cardEl) continue;
 
-            if (targetProgress === 1.0) {
-                const rank = STAGGER_RANKS[i];
-                const rankStart = rank * 0.085;
-                const rankDur = 0.72;
-                const cardTarget = Math.min(1.0, Math.max(0.0, (this._masterSettleProgress - rankStart) / rankDur));
-                cState.progress = this.lerp(cState.progress, cardTarget, 0.35);
-                if (Math.abs(cState.progress - cardTarget) < 0.001) {
-                    cState.progress = cardTarget;
-                }
-            } else {
-                // Collapsing during scroll: swift, responsive collapse back into orbiting dots
-                cState.progress = this.lerp(cState.progress, 0.0, 0.22);
-                if (cState.progress < 0.001) {
-                    cState.progress = 0.0;
-                }
-            }
+            cState.progress = 1.0;
 
-            // S-curve easing
-            const ease = cState.progress * cState.progress * (3 - 2 * cState.progress);
-            cState.x = this.lerp(this._orbPositions[i].x, this._editorialAnchors[i].x, ease);
-            cState.y = this.lerp(this._orbPositions[i].y, this._editorialAnchors[i].y, ease);
+            // Per-card drift with the Z-reading stagger so motion feels organic
+            const rank = STAGGER_RANKS[i];
+            const drift = this._scrollDrift * (1.0 - rank * 0.12);
+
+            cState.x = this._editorialAnchors[i].x;
+            cState.y = this._editorialAnchors[i].y + drift;
 
             cardEl.style.transform = `translate3d(${cState.x.toFixed(1)}px, ${cState.y.toFixed(1)}px, 0)`;
+            cardEl.style.setProperty('--mc-motion', this._motionLevel.toFixed(3));
 
-            // Harmonize 3D orbit node mesh scale on golden ring
+            // Orbit node meshes stay hidden: the card + leader line mark the anchor
             if (this.orbitNodes[i]) {
-                const nodeScale = Math.max(0.001, 1.0 - cState.progress);
-                this.orbitNodes[i].scale.setScalar(nodeScale);
+                this.orbitNodes[i].scale.setScalar(0.001);
             }
 
-            if (cState.progress >= 0.5) {
-                if (!cState.isCard) {
-                    cState.isCard = true;
-                    cardEl.classList.remove('is-dot');
-                    cardEl.classList.add('is-card');
-                    this.measureCardHeights();
-                }
-            } else {
-                if (cState.isCard) {
-                    cState.isCard = false;
-                    cardEl.classList.remove('is-card');
-                    cardEl.classList.add('is-dot');
-                }
+            if (!cState.isCard) {
+                cState.isCard = true;
+                cardEl.classList.remove('is-dot');
+                cardEl.classList.add('is-card');
+                this.measureCardHeights();
             }
 
             // 5. Update SVG Architectural Leader Line
             const leader = this.leaderElements[i];
             if (leader && leader.group && leader.path && leader.tick && leader.ring) {
-                if (!showLeaders || cState.progress <= 0.55) {
+                if (!showLeaders) {
                     leader.group.style.opacity = '0';
                 } else {
-                    const rawReveal = Math.min(1.0, Math.max(0.0, (cState.progress - 0.55) / 0.45));
-                    const reveal = rawReveal * rawReveal * (3 - 2 * rawReveal);
+                    const reveal = 1.0;
 
                     const isLeft = i < 2;
                     const dir = isLeft ? 1 : -1;

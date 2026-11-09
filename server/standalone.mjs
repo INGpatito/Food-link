@@ -1,6 +1,7 @@
 import http from 'node:http';
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
+import { handlePlacesRequest, ensurePlacesSchema } from './placesApi.mjs';
 
 const PORT = Number(process.env.API_PORT || process.env.PORT || 3005);
 const DB_HOST = process.env.DB_HOST || '127.0.0.1';
@@ -65,6 +66,12 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
   const method = req.method?.toUpperCase();
+
+  // Lugares y ofertas cercanas (mapa /explorar)
+  if (pathname.startsWith('/api/places')) {
+    await handlePlacesRequest(req, res, url, pool, sendJson);
+    return;
+  }
 
   try {
     // 1. Registro
@@ -246,5 +253,8 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Foodlink Auth API corriendo en http://127.0.0.1:${PORT}`);
+  console.log(`Foodlink Auth & Places API corriendo en http://127.0.0.1:${PORT} (conectado a ${DB_NAME})`);
+  ensurePlacesSchema(pool).catch((err) => {
+    console.warn('[Places Schema]: Advertencia al verificar tablas en FOODLINK:', err?.message || err);
+  });
 });

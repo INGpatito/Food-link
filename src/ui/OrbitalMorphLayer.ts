@@ -133,6 +133,15 @@ export interface LeaderLineElements {
     ring: SVGCircleElement | null;
 }
 
+/** Duration of the quick text fade-out before swapping content (ms). */
+const SWAP_OUT_MS = 170;
+
+/**
+ * Per-card start delay for content swaps, following the Z-reading order:
+ * Top-Left (0) -> Top-Right (2) -> Bottom-Left (1) -> Bottom-Right (3).
+ */
+const SWAP_STAGGER_MS = [0, 110, 55, 165];
+
 /**
  * Renders and synchronizes the 4 hybrid 3D-to-screen HUD cards
  * and their architectural SVG leader lines to the 3D golden ring.
@@ -160,7 +169,14 @@ export class OrbitalMorphLayer {
     private mc3Title: HTMLElement | null = null;
     private mc3Desc: HTMLElement | null = null;
 
-    private lastStageIndex = -1;
+    private mc0Stage: HTMLElement | null = null;
+
+    // Animated in-place content swap state (cards never collapse while scrolling)
+    private targetStage = 0;
+    private swapTimers: (number | null)[] = [null, null, null, null];
+    private readonly reducedMotion = typeof window !== 'undefined'
+        && typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     constructor(container: HTMLElement) {
         this.container = container;
@@ -217,7 +233,7 @@ export class OrbitalMorphLayer {
                 <div class="orbital-card-inner">
                     <div class="mc-tag-row">
                         <span id="mc0-tag" class="mc-tag-label">PROPUESTA GASTRONOMICA</span>
-                        <span class="mc-badge">ACTIVO</span>
+                        <span id="mc0-stage" class="mc-badge" aria-label="Etapa 1 de 4">01 / 04</span>
                     </div>
                     <h3 id="mc0-title" class="mc-title">HAMBURGUESA DE AUTOR</h3>
                     <p id="mc0-desc" class="mc-desc">Cocina de autor que entra por los ojos y rescata cada preparacion del dia conectando comensales con obradores locales.</p>
@@ -368,6 +384,8 @@ export class OrbitalMorphLayer {
         this.mc3Title = this.container.querySelector('#mc3-title');
         this.mc3Desc = this.container.querySelector('#mc3-desc');
 
+        this.mc0Stage = this.container.querySelector('#mc0-stage');
+
         this.container.style.opacity = '1';
     }
 
@@ -379,30 +397,81 @@ export class OrbitalMorphLayer {
         return this.leaderElements;
     }
 
+    /**
+     * Requests the cards to show the content of `stageIndex`.
+     * Cards stay visible: each one quickly fades its text out, swaps it and
+     * fades back in (staggered in Z-reading order), so information is never
+     * hidden while the user scrolls. Rapid stage changes coalesce to the
+     * latest stage. Returns true when a new stage was requested.
+     */
     public updateCardContent(stageIndex: number): boolean {
-        if (stageIndex === this.lastStageIndex) return false;
-        this.lastStageIndex = stageIndex;
+        if (stageIndex === this.targetStage) return false;
+        if (!DISH_CARD_DATA[stageIndex]) return false;
+        this.targetStage = stageIndex;
 
-        const data = DISH_CARD_DATA[stageIndex];
-        if (!data) return false;
-
-        if (this.mc0Tag) this.mc0Tag.textContent = data.card0.tag;
-        if (this.mc0Title) this.mc0Title.textContent = data.card0.title;
-        if (this.mc0Desc) this.mc0Desc.textContent = data.card0.desc;
-
-        if (this.mc1Tag) this.mc1Tag.textContent = data.card1.tag;
-        if (this.mc1Title) this.mc1Title.textContent = data.card1.title;
-        if (this.mc1Desc) this.mc1Desc.textContent = data.card1.desc;
-
-        if (this.mc2Tag) this.mc2Tag.textContent = data.card2.tag;
-        if (this.mc2Title) this.mc2Title.textContent = data.card2.title;
-        if (this.mc2Desc) this.mc2Desc.textContent = data.card2.desc;
-
-        if (this.mc3MetricL) this.mc3MetricL.textContent = data.card3.metricLabel;
-        if (this.mc3MetricV) this.mc3MetricV.textContent = data.card3.metricValue;
-        if (this.mc3Title) this.mc3Title.textContent = data.card3.title;
-        if (this.mc3Desc) this.mc3Desc.textContent = data.card3.desc;
+        for (let i = 0; i < 4; i++) {
+            this.scheduleCardSwap(i);
+        }
         return true;
+    }
+
+    private scheduleCardSwap(cardIndex: number): void {
+        // A swap already in flight will pick up the latest targetStage
+        if (this.swapTimers[cardIndex] !== null) return;
+
+        const cardEl = this.cardElements[cardIndex];
+        if (!cardEl || this.reducedMotion) {
+            this.writeCardContent(cardIndex, this.targetStage);
+            return;
+        }
+
+        const delay = SWAP_STAGGER_MS[cardIndex] ?? 0;
+        this.swapTimers[cardIndex] = window.setTimeout(() => {
+            cardEl.classList.add('is-swapping');
+            this.swapTimers[cardIndex] = window.setTimeout(() => {
+                this.writeCardContent(cardIndex, this.targetStage);
+                cardEl.classList.remove('is-swapping');
+                // Restart the accent sweep animation
+                cardEl.classList.remove('is-refreshed');
+                void cardEl.offsetWidth;
+                cardEl.classList.add('is-refreshed');
+                this.swapTimers[cardIndex] = null;
+            }, SWAP_OUT_MS);
+        }, delay);
+    }
+
+    private writeCardContent(cardIndex: number, stageIndex: number): void {
+        const data = DISH_CARD_DATA[stageIndex];
+        if (!data) return;
+
+        switch (cardIndex) {
+            case 0:
+                if (this.mc0Tag) this.mc0Tag.textContent = data.card0.tag;
+                if (this.mc0Title) this.mc0Title.textContent = data.card0.title;
+                if (this.mc0Desc) this.mc0Desc.textContent = data.card0.desc;
+                if (this.mc0Stage) {
+                    const n = stageIndex + 1;
+                    this.mc0Stage.textContent = `0${n} / 0${DISH_CARD_DATA.length}`;
+                    this.mc0Stage.setAttribute('aria-label', `Etapa ${n} de ${DISH_CARD_DATA.length}`);
+                }
+                break;
+            case 1:
+                if (this.mc1Tag) this.mc1Tag.textContent = data.card1.tag;
+                if (this.mc1Title) this.mc1Title.textContent = data.card1.title;
+                if (this.mc1Desc) this.mc1Desc.textContent = data.card1.desc;
+                break;
+            case 2:
+                if (this.mc2Tag) this.mc2Tag.textContent = data.card2.tag;
+                if (this.mc2Title) this.mc2Title.textContent = data.card2.title;
+                if (this.mc2Desc) this.mc2Desc.textContent = data.card2.desc;
+                break;
+            case 3:
+                if (this.mc3MetricL) this.mc3MetricL.textContent = data.card3.metricLabel;
+                if (this.mc3MetricV) this.mc3MetricV.textContent = data.card3.metricValue;
+                if (this.mc3Title) this.mc3Title.textContent = data.card3.title;
+                if (this.mc3Desc) this.mc3Desc.textContent = data.card3.desc;
+                break;
+        }
     }
 
     public show(): void {

@@ -69,6 +69,23 @@ export class Navbar {
 
                 <!-- Right Action Buttons -->
                 <div class="nav-actions-group">
+                    <!-- Explore Map Primary CTA (Solo visible con sesion iniciada) -->
+                    <a href="/explorar/" id="nav-explore-btn" class="nav-btn-cta hidden" aria-label="Explorar mapa de comida cerca">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z" />
+                            <circle cx="12" cy="9.5" r="2.3" />
+                        </svg>
+                        <span>EXPLORAR MAPA</span>
+                    </a>
+
+                    <!-- Dedicated Profile / QR Orders Link (Solo visible con sesion iniciada) -->
+                    <a href="/perfil/" id="nav-profile-btn" class="nav-btn-account hidden" aria-label="Mi Perfil, Pedidos QR e Impacto">
+                        <svg class="w-3.5 h-3.5 text-[#F4A261]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a2 2 0 0 0 0 3V16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2.5a2 2 0 0 0 0-3V8Z" />
+                        </svg>
+                        <span>MI PERFIL</span>
+                    </a>
+
                     <!-- Login / Account Button -->
                     <button type="button" id="open-login-btn" class="nav-btn-account" aria-label="Acceso de comensal">
                         <span id="nav-login-icon-container" class="flex items-center">
@@ -77,6 +94,7 @@ export class Navbar {
                             </svg>
                         </span>
                         <span id="nav-login-label">INGRESAR</span>
+                    </button>
                     <!-- Mobile Menu Toggle Button (Visible on screens < 1280px) -->
                     <button type="button" id="nav-mobile-toggle-btn" class="nav-mobile-toggle" aria-label="Menu principal">
                         <svg id="nav-mobile-icon-bars" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -109,6 +127,16 @@ export class Navbar {
                         </button>
                     </div>
                     <div class="flex flex-col gap-2 pt-2">
+                        <a href="/explorar/" id="nav-mobile-explore-btn" class="nav-btn-cta justify-center w-full py-2.5 hidden">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z" />
+                                <circle cx="12" cy="9.5" r="2.3" />
+                            </svg>
+                            <span>EXPLORAR MAPA CERCA</span>
+                        </a>
+                        <a href="/perfil/" id="nav-mobile-profile-btn" class="nav-btn-account justify-center w-full py-2.5 hidden">
+                            <span>MI PERFIL Y PEDIDOS QR</span>
+                        </a>
                         <button type="button" id="nav-mobile-login-btn" class="nav-btn-account justify-center w-full py-2.5">
                             <span id="nav-mobile-login-label">INGRESAR A MI CUENTA</span>
                         </button>
@@ -187,6 +215,10 @@ export class Navbar {
             const loginLabel = this.container.querySelector<HTMLElement>('#nav-login-label');
             const mobileLoginLabel = this.container.querySelector<HTMLElement>('#nav-mobile-login-label');
             const iconContainer = this.container.querySelector<HTMLElement>('#nav-login-icon-container');
+            const exploreBtn = this.container.querySelector<HTMLElement>('#nav-explore-btn');
+            const profileBtn = this.container.querySelector<HTMLElement>('#nav-profile-btn');
+            const mobileExploreBtn = this.container.querySelector<HTMLElement>('#nav-mobile-explore-btn');
+            const mobileProfileBtn = this.container.querySelector<HTMLElement>('#nav-mobile-profile-btn');
 
             if (user) {
                 const firstName = user.name.trim().split(' ')[0] || user.name;
@@ -195,6 +227,10 @@ export class Navbar {
                 if (iconContainer) {
                     iconContainer.innerHTML = `<span class="nav-user-indicator mr-0.5"></span>`;
                 }
+                exploreBtn?.classList.remove('hidden');
+                profileBtn?.classList.remove('hidden');
+                mobileExploreBtn?.classList.remove('hidden');
+                mobileProfileBtn?.classList.remove('hidden');
             } else {
                 if (loginLabel) loginLabel.textContent = 'INGRESAR';
                 if (mobileLoginLabel) mobileLoginLabel.textContent = 'INGRESAR A MI CUENTA';
@@ -205,6 +241,10 @@ export class Navbar {
                         </svg>
                     `;
                 }
+                exploreBtn?.classList.add('hidden');
+                profileBtn?.classList.add('hidden');
+                mobileExploreBtn?.classList.add('hidden');
+                mobileProfileBtn?.classList.add('hidden');
             }
         };
 
