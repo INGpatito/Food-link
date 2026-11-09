@@ -689,12 +689,14 @@ export function initLoginModal(container: HTMLElement | null) {
       pendingEmail = email;
       const verificationCode = data.verificationCode;
 
-      // Disparar envio de correo mediante EmailJS
-      await sendVerificationEmail(email, name, verificationCode);
+      // Si el backend aun no despacho el correo, enviarlo desde el cliente mediante EmailJS
+      if (!data.emailSent && verificationCode) {
+        await sendVerificationEmail(email, name, verificationCode);
+      }
 
       formRegister.reset();
       setTab('verify');
-      showFeedback('Usuario registrado exitosamente. Por favor verifica tu código.', 'success');
+      showFeedback('Usuario registrado exitosamente. Revisa tu bandeja de Gmail e ingresa tu código.', 'success');
     } catch (err: any) {
       console.error(err);
       showFeedback('Error de comunicación con el servidor: ' + (err.message || 'Sin respuesta'), 'error');
@@ -834,7 +836,9 @@ export function initLoginModal(container: HTMLElement | null) {
       }
 
       const newCode = data.verificationCode;
-      await sendVerificationEmail(pendingEmail, 'Comensal', newCode);
+      if (!data.emailSent && newCode) {
+        await sendVerificationEmail(pendingEmail, 'Comensal', newCode);
+      }
 
       showFeedback('Nuevo código de verificación generado y enviado a tu correo.', 'success');
     } catch (err: any) {

@@ -4,9 +4,11 @@ import bcrypt from 'bcryptjs';
 import {
   findUserByEmail,
   createUser,
+  updateUnverifiedUser,
   verifyUserToken,
   updateUserVerificationToken
 } from './db.ts';
+import { sendVerificationEmailServer } from './emailSender.mjs';
 
 function parseRequestBody(req: IncomingMessage): Promise<any> {
   return new Promise((resolve, reject) => {
@@ -77,7 +79,7 @@ export function authPlugin(): Plugin {
             }
 
             const existingUser = await findUserByEmail(email);
-            if (existingUser) {
+            if (existingUser && Boolean(existingUser.is_verified)) {
               return sendJson(res, 409, {
                 success: false,
                 message: 'Este correo electronico ya se encuentra registrado.'
@@ -87,7 +89,11 @@ export function authPlugin(): Plugin {
             const passwordHash = await bcrypt.hash(password, 10);
             const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
 
-            const newUser = await createUser(name, email, passwordHash, verificationCode);
+            const newUser = existingUser
+              ? await updateUnverifiedUser(existingUser.id, name, email, passwordHash, verificationCode)
+              : await createUser(name, email, passwordHash, verificationCode);
+
+            const emailResult = await sendVerificationEmailServer(newUser.email, newUser.name, verificationCode);
 
             return sendJson(res, 201, {
               success: true,
@@ -98,7 +104,8 @@ export function authPlugin(): Plugin {
                 email: newUser.email,
                 is_verified: false
               },
-              verificationCode
+              verificationCode,
+              emailSent: emailResult.sent
             });
           }
 
@@ -224,11 +231,13 @@ export function authPlugin(): Plugin {
 
             const newCode = String(Math.floor(100000 + Math.random() * 900000));
             await updateUserVerificationToken(email, newCode);
+            const emailResult = await sendVerificationEmailServer(user.email, user.name, newCode);
 
             return sendJson(res, 200, {
               success: true,
-              message: 'Nuevo codigo generado y enviado.',
-              verificationCode: newCode
+              message: 'Nuevo codigo generado y enviado a tu correo.',
+              verificationCode: newCode,
+              emailSent: emailResult.sent
             });
           }
 

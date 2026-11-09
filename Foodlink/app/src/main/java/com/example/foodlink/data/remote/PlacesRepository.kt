@@ -7,16 +7,46 @@ import com.example.foodlink.data.model.PlaceItem
 import com.example.foodlink.data.model.PlaceOffer
 import com.example.foodlink.data.model.PlaceReview
 import com.example.foodlink.data.model.QuickOfferTemplate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
- * Repositorio de lugares, ofertas de rescate, reservas con QR, favoritos,
- * resenas, impacto ambiental y panel de negocio para la app Android de Foodlink.
+ * Repositorio conectado en tiempo real con https://papoys.me/api/places
+ * para sincronizar lugares, ofertas de rescate, reservas con QR (FL-XXXXXX),
+ * favoritos, resenas, impacto ambiental, preferencias y panel de negocio
+ * entre la plataforma web y la aplicacion Android.
  */
 object PlacesRepository {
+
+    private const val BASE_URL = "https://papoys.me/api/places"
+    private const val TIMEOUT_MS = 10000
+
+    @Volatile
+    var currentUserEmail: String = ""
+
+    @Volatile
+    var currentLat: Double = 19.4326
+
+    @Volatile
+    var currentLng: Double = -99.1332
+
+    private val userDietTags = mutableListOf("Sin restricciones", "Comida corrida casera")
 
     val quickTemplates = listOf(
         QuickOfferTemplate(
@@ -73,10 +103,10 @@ object PlacesRepository {
         )
     )
 
-    private var nextPlaceId = 9
-    private var nextOfferId = 20
-    private var nextOrderId = 101
-    private var nextReviewId = 50
+    private var nextPlaceId = 900
+    private var nextOfferId = 900
+    private var nextOrderId = 900
+    private var nextReviewId = 900
 
     private val places = mutableListOf(
         PlaceItem(
@@ -300,14 +330,134 @@ object PlacesRepository {
     )
 
     private val orders = mutableListOf<OrderItem>()
+    private var serverImpact: ImpactSummary? = null
+
+    /**
+     * Sincroniza lugares, ofertas, favoritos, reservas QR, impacto ambiental y preferencias
+     * con el servidor central https://papoys.me/api/places.
+     */
+    suspend fun syncWithServer(
+        userEmail: String,
+        lat: Double = currentLat,
+        lng: Double = currentLng
+    ): Boolean = withContext(Dispatchers.IO) {
+        val cleanEmail = userEmail.trim().lowercase()
+        if (cleanEmail.isNotEmpty()) {
+            currentUserEmail = cleanEmail
+        }
+        currentLat = lat
+        currentLng = lng
+
+        var syncedAny = false
+
+        // 1. Cargar lugares cercanos (incluyendo establecimientos sin ofertas activas para el panel de negocio)
+        try {
+            val encodedEmail = URLEncoder.encode(currentUserEmail, "UTF-8")
+            val nearbyUrl = "$BASE_URL/nearby?lat=$lat&lng=$lng&radius=25000&filter=all&withoutOffers=1&email=$encodedEmail"
+            val json = getRequestJson(nearbyUrl)
+            if (json != null && json.has("places")) {
+                val arr = json.getJSONArray("places")
+                val parsedPlaces = mutableListOf<PlaceItem>()
+                for (i in 0 until arr.length()) {
+                    parsedPlaces.add(parsePlaceJson(arr.getJSONObject(i)))
+                }
+                if (parsedPlaces.isNotEmpty()) {
+                    synchronized(places) {
+                        places.clear()
+                        places.addAll(parsedPlaces)
+                    }
+                    syncedAny = true
+                }
+            }
+        } catch (_: Exception) {
+        }
+
+        // 2. Cargar reservas QR e impacto ambiental del usuario
+        if (currentUserEmail.isNotEmpty()) {
+            try {
+                val encodedEmail = URLEncoder.encode(currentUserEmail, "UTF-8")
+                val ordersJson = getRequestJson("$BASE_URL/orders?email=$encodedEmail")
+                if (ordersJson != null && ordersJson.has("orders")) {
+                    val arr = ordersJson.getJSONArray("orders")
+                    val parsedOrders = mutableListOf<OrderItem>()
+                    for (i in 0 until arr.length()) {
+                        parsedOrders.add(parseOrderJson(arr.getJSONObject(i)))
+                    }
+                    synchronized(orders) {
+                        orders.clear()
+                        orders.addAll(parsedOrders)
+                    }
+                    if (ordersJson.has("impact") && !ordersJson.isNull("impact")) {
+                        serverImpact = parseImpactJson(ordersJson.getJSONObject("impact"))
+                    }
+                    syncedAny = true
+                }
+            } catch (_: Exception) {
+            }
+
+            // 3. Cargar preferencias alimentarias del usuario
+            try {
+                val encodedEmail = URLEncoder.encode(currentUserEmail, "UTF-8")
+                val profJson = getRequestJson("$BASE_URL/profile?user_email=$encodedEmail")
+                if (profJson != null && profJson.has("profile") && !profJson.isNull("profile")) {
+                    val prof = profJson.getJSONObject("profile")
+                    if (prof.has("diet_tags")) {
+                        val tagsArr = prof.getJSONArray("diet_tags")
+                        val tags = mutableListOf<String>()
+                        for (i in 0 until tagsArr.length()) {
+                            val t = tagsArr.optString(i, "").trim()
+                            if (t.isNotEmpty()) tags.add(t)
+                        }
+                        if (tags.isNotEmpty()) {
+                            synchronized(userDietTags) {
+                                userDietTags.clear()
+                                userDietTags.addAll(tags)
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        syncedAny
+    }
+
+    fun getUserDietTags(): List<String> = synchronized(userDietTags) { userDietTags.toList() }
+
+    fun saveUserProfile(userEmail: String, displayName: String, dietTags: List<String>): Boolean {
+        val cleanEmail = userEmail.trim().lowercase().ifEmpty { currentUserEmail }
+        if (dietTags.isNotEmpty()) {
+            synchronized(userDietTags) {
+                userDietTags.clear()
+                userDietTags.addAll(dietTags)
+            }
+        }
+        return runBlocking(Dispatchers.IO) {
+            try {
+                val tagsJson = JSONArray()
+                dietTags.forEach { tagsJson.put(it) }
+                val payload = JSONObject().apply {
+                    put("user_email", cleanEmail)
+                    put("display_name", displayName.trim())
+                    put("diet_tags", tagsJson)
+                }
+                val res = postRequestJson("$BASE_URL/profile", payload)
+                res?.optBoolean("success", false) == true
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
 
     fun getPlaces(
         searchQuery: String = "",
-        offerFilter: String = "all", // "all" | "free" | "discount" | "surprise"
+        offerFilter: String = "all",
         categoryFilter: String = "all"
     ): List<PlaceItem> {
         val q = searchQuery.trim().lowercase()
-        return places.filter { p ->
+        val snapshot = synchronized(places) { places.toList() }
+        return snapshot.filter { p ->
             val matchesQuery = q.isEmpty() ||
                 p.name.lowercase().contains(q) ||
                 p.address.lowercase().contains(q) ||
@@ -325,13 +475,29 @@ object PlacesRepository {
         }.sortedBy { it.distanceMeters }
     }
 
-    fun getAllPlaces(): List<PlaceItem> = places.toList()
+    fun getAllPlaces(): List<PlaceItem> = synchronized(places) { places.toList() }
 
-    fun getFavoritePlaces(): List<PlaceItem> = places.filter { it.isFavorite }
+    fun getFavoritePlaces(): List<PlaceItem> = synchronized(places) { places.filter { it.isFavorite } }
 
-    fun toggleFavorite(businessId: Int): Boolean {
-        val place = places.find { it.id == businessId } ?: return false
-        place.isFavorite = !place.isFavorite
+    fun toggleFavorite(businessId: Int, userEmail: String = currentUserEmail): Boolean {
+        val place = synchronized(places) { places.find { it.id == businessId } } ?: return false
+        val cleanEmail = userEmail.trim().lowercase().ifEmpty { currentUserEmail }
+        val serverResult = runBlocking(Dispatchers.IO) {
+            try {
+                val payload = JSONObject().apply {
+                    put("user_email", cleanEmail.ifEmpty { "comensal@foodlink.mx" })
+                    put("business_id", businessId)
+                }
+                postRequestJson("$BASE_URL/favorites/toggle", payload)
+            } catch (_: Exception) {
+                null
+            }
+        }
+        place.isFavorite = if (serverResult != null && serverResult.has("is_favorite")) {
+            serverResult.optBoolean("is_favorite", !place.isFavorite)
+        } else {
+            !place.isFavorite
+        }
         return place.isFavorite
     }
 
@@ -341,20 +507,64 @@ object PlacesRepository {
         userEmail: String,
         userName: String
     ): Result<OrderItem> {
+        val cleanEmail = userEmail.trim().lowercase().ifEmpty { currentUserEmail }
+        currentUserEmail = cleanEmail
+        val qty = quantity.coerceIn(1, 10)
+
+        // Intentar crear la reserva en el servidor MySQL primero
+        val serverResponse = runBlocking(Dispatchers.IO) {
+            try {
+                val payload = JSONObject().apply {
+                    put("offer_id", offerId)
+                    put("quantity", qty)
+                    put("user_email", cleanEmail)
+                    put("user_name", userName.trim().ifEmpty { "Comensal Foodlink" })
+                }
+                postRequestJson("$BASE_URL/orders", payload)
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        if (serverResponse != null) {
+            if (serverResponse.optBoolean("success", false) && serverResponse.has("order")) {
+                val order = parseOrderJson(serverResponse.getJSONObject("order"))
+                synchronized(orders) {
+                    orders.removeAll { it.id == order.id }
+                    orders.add(0, order)
+                }
+                synchronized(places) {
+                    for (p in places) {
+                        val off = p.offers.find { it.id == offerId }
+                        if (off != null) {
+                            off.quantityLeft = max(0, off.quantityLeft - qty)
+                            if (off.quantityLeft <= 0) off.status = "sold_out"
+                            break
+                        }
+                    }
+                }
+                return Result.success(order)
+            } else if (serverResponse.has("error")) {
+                return Result.failure(Exception(serverResponse.optString("error", "No se pudo reservar")))
+            }
+        }
+
+        // Respaldo local si no hay conexion temporal
         var foundPlace: PlaceItem? = null
         var foundOffer: PlaceOffer? = null
-        for (p in places) {
-            val off = p.offers.find { it.id == offerId }
-            if (off != null) {
-                foundPlace = p
-                foundOffer = off
-                break
+        synchronized(places) {
+            for (p in places) {
+                val off = p.offers.find { it.id == offerId }
+                if (off != null) {
+                    foundPlace = p
+                    foundOffer = off
+                    break
+                }
             }
         }
         val place = foundPlace ?: return Result.failure(Exception("Lugar no encontrado"))
         val offer = foundOffer ?: return Result.failure(Exception("Oferta no encontrada"))
 
-        val qty = quantity.coerceIn(1, 10)
         if (offer.status != "active" || offer.quantityLeft < qty) {
             return Result.failure(Exception("Solo quedan ${offer.quantityLeft} unidades disponibles"))
         }
@@ -367,7 +577,7 @@ object PlacesRepository {
         val code = generatePickupCode()
         val order = OrderItem(
             id = nextOrderId++,
-            userEmail = userEmail,
+            userEmail = cleanEmail,
             userName = userName,
             businessId = place.id,
             businessName = place.name,
@@ -383,25 +593,38 @@ object PlacesRepository {
             pickupWindow = offer.pickupWindow,
             status = "reserved"
         )
-        orders.add(0, order)
+        synchronized(orders) {
+            orders.add(0, order)
+        }
         return Result.success(order)
     }
 
-    fun getOrders(): List<OrderItem> = orders.toList()
+    fun getOrders(): List<OrderItem> = synchronized(orders) { orders.toList() }
 
     fun cancelOrder(orderId: Int): Boolean {
-        val ord = orders.find { it.id == orderId } ?: return false
-        if (ord.status != "reserved") return false
-        ord.status = "cancelled"
-        for (p in places) {
-            val off = p.offers.find { it.id == ord.offerId }
-            if (off != null) {
-                off.quantityLeft += ord.quantity
-                off.status = "active"
-                break
+        val serverRes = runBlocking(Dispatchers.IO) {
+            try {
+                postRequestJson("$BASE_URL/orders/$orderId/cancel", JSONObject())
+            } catch (_: Exception) {
+                null
             }
         }
-        return true
+        val ord = synchronized(orders) { orders.find { it.id == orderId } }
+        if (ord != null) {
+            ord.status = "cancelled"
+            synchronized(places) {
+                for (p in places) {
+                    val off = p.offers.find { it.id == ord.offerId }
+                    if (off != null) {
+                        off.quantityLeft += ord.quantity
+                        off.status = "active"
+                        break
+                    }
+                }
+            }
+            return true
+        }
+        return serverRes?.optBoolean("success", false) == true
     }
 
     fun redeemOrderByCode(rawCode: String): Result<OrderItem> {
@@ -412,7 +635,37 @@ object PlacesRepository {
         if (!code.startsWith("FL-") && code.length == 6) {
             code = "FL-$code"
         }
-        val ord = orders.find { it.pickupCode.uppercase() == code }
+
+        // Validar contra el servidor MySQL (permite canjear en la app codigos QR creados en la web y viceversa)
+        val serverRes = runBlocking(Dispatchers.IO) {
+            try {
+                val payload = JSONObject().apply {
+                    put("pickup_code", code)
+                }
+                postRequestJson("$BASE_URL/business/redeem", payload)
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        if (serverRes != null) {
+            if (serverRes.optBoolean("success", false) && serverRes.has("order")) {
+                val redeemedOrder = parseOrderJson(serverRes.getJSONObject("order"))
+                synchronized(orders) {
+                    val idx = orders.indexOfFirst { it.id == redeemedOrder.id || it.pickupCode.equals(code, ignoreCase = true) }
+                    if (idx >= 0) {
+                        orders[idx] = redeemedOrder
+                    } else {
+                        orders.add(0, redeemedOrder)
+                    }
+                }
+                return Result.success(redeemedOrder)
+            } else if (serverRes.has("error")) {
+                return Result.failure(Exception(serverRes.optString("error", "Codigo no valido")))
+            }
+        }
+
+        val ord = synchronized(orders) { orders.find { it.pickupCode.uppercase() == code } }
             ?: return Result.failure(Exception("No existe ninguna reserva con el codigo $code"))
 
         if (ord.status == "picked_up") {
@@ -426,13 +679,45 @@ object PlacesRepository {
     }
 
     fun addReview(businessId: Int, userName: String, stars: Int, comment: String): PlaceReview? {
-        val place = places.find { it.id == businessId } ?: return null
+        val cleanComment = comment.trim().ifBlank { "Excelente comida y atencion." }
+        val cleanName = userName.ifBlank { "Comensal Foodlink" }
+        val safeStars = stars.coerceIn(1, 5)
+
+        val serverRes = runBlocking(Dispatchers.IO) {
+            try {
+                val payload = JSONObject().apply {
+                    put("user_email", currentUserEmail.ifEmpty { "comensal@foodlink.mx" })
+                    put("user_name", cleanName)
+                    put("business_id", businessId)
+                    put("stars", safeStars)
+                    put("comment", cleanComment)
+                }
+                postRequestJson("$BASE_URL/reviews", payload)
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        val place = synchronized(places) { places.find { it.id == businessId } } ?: return null
+        if (serverRes != null && serverRes.optBoolean("success", false)) {
+            place.ratingAvg = serverRes.optDouble("rating_avg", place.ratingAvg)
+            place.ratingCount = serverRes.optInt("rating_count", place.ratingCount)
+            if (serverRes.has("reviews")) {
+                val arr = serverRes.getJSONArray("reviews")
+                place.reviews.clear()
+                for (i in 0 until arr.length()) {
+                    place.reviews.add(parseReviewJson(arr.getJSONObject(i), businessId))
+                }
+                return place.reviews.firstOrNull()
+            }
+        }
+
         val rev = PlaceReview(
             id = nextReviewId++,
             businessId = businessId,
-            userName = userName.ifBlank { "Comensal Foodlink" },
-            stars = stars.coerceIn(1, 5),
-            comment = comment.trim().ifBlank { "Excelente comida y atencion." }
+            userName = cleanName,
+            stars = safeStars,
+            comment = cleanComment
         )
         place.reviews.add(0, rev)
         val total = place.ratingAvg * place.ratingCount + rev.stars
@@ -449,6 +734,50 @@ object PlacesRepository {
         openingHours: String,
         description: String
     ): PlaceItem {
+        val serverRes = runBlocking(Dispatchers.IO) {
+            try {
+                val payload = JSONObject().apply {
+                    put("owner_email", currentUserEmail.ifEmpty { "aliado@foodlink.mx" })
+                    put("name", name.trim())
+                    put("type", type)
+                    put("description", description.trim().ifBlank { "Comercio local aliado de rescate en Foodlink." })
+                    put("address", address.trim().ifBlank { "Centro de la ciudad" })
+                    put("phone", phone.trim().ifBlank { "55 0000 0000" })
+                    put("opening_hours", openingHours.trim().ifBlank { "Lun-Sab 9:00-21:00" })
+                    put("lat", currentLat)
+                    put("lng", currentLng)
+                }
+                postRequestJson("$BASE_URL/business", payload)
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        if (serverRes != null && serverRes.optBoolean("success", false) && serverRes.has("business")) {
+            val b = serverRes.getJSONObject("business")
+            val created = PlaceItem(
+                id = b.optInt("id", nextPlaceId++),
+                name = b.optString("name", name.trim()),
+                type = b.optString("type", type),
+                description = b.optString("description", description.trim()),
+                address = b.optString("address", address.trim()),
+                phone = b.optString("phone", phone.trim()),
+                openingHours = b.optString("opening_hours", openingHours.trim()),
+                lat = b.optDouble("lat", currentLat),
+                lng = b.optDouble("lng", currentLng),
+                distanceMeters = 50,
+                ratingAvg = b.optDouble("rating_avg", 5.0),
+                ratingCount = b.optInt("rating_count", 1),
+                isVerified = true,
+                isFavorite = true
+            )
+            synchronized(places) {
+                places.removeAll { it.id == created.id }
+                places.add(0, created)
+            }
+            return created
+        }
+
         val newPlace = PlaceItem(
             id = nextPlaceId++,
             name = name.trim(),
@@ -457,15 +786,17 @@ object PlacesRepository {
             address = address.trim().ifBlank { "Centro de la ciudad" },
             phone = phone.trim().ifBlank { "55 0000 0000" },
             openingHours = openingHours.trim().ifBlank { "Lun-Sab 9:00-21:00" },
-            lat = 19.4326,
-            lng = -99.1332,
+            lat = currentLat,
+            lng = currentLng,
             distanceMeters = 150,
             ratingAvg = 5.0,
             ratingCount = 1,
             isVerified = true,
             isFavorite = true
         )
-        places.add(0, newPlace)
+        synchronized(places) {
+            places.add(0, newPlace)
+        }
         return newPlace
     }
 
@@ -481,7 +812,36 @@ object PlacesRepository {
         tags: String,
         allergens: String
     ): PlaceOffer? {
-        val place = places.find { it.id == businessId } ?: return null
+        val place = synchronized(places) { places.find { it.id == businessId } } ?: return null
+
+        val serverRes = runBlocking(Dispatchers.IO) {
+            try {
+                val payload = JSONObject().apply {
+                    put("owner_email", currentUserEmail.ifEmpty { "aliado@foodlink.mx" })
+                    put("business_id", businessId)
+                    put("title", title.trim())
+                    put("description", "Publicada desde el panel de negocio en Foodlink.")
+                    put("kind", kind)
+                    put("original_price", max(0.0, originalPrice))
+                    put("price", max(0.0, price))
+                    put("quantity_total", quantityTotal.coerceIn(1, 100))
+                    put("pickup_hours", pickupHours)
+                    put("est_weight_kg", estWeightKg.coerceIn(0.1, 20.0))
+                    put("tags", tags)
+                    put("allergens", allergens.trim())
+                }
+                postRequestJson("$BASE_URL/business/offers", payload)
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        if (serverRes != null && serverRes.optBoolean("success", false) && serverRes.has("offer")) {
+            val parsed = parseOfferJson(serverRes.getJSONObject("offer"), businessId)
+            place.offers.add(0, parsed)
+            return parsed
+        }
+
         val offer = PlaceOffer(
             id = nextOfferId++,
             businessId = businessId,
@@ -503,19 +863,28 @@ object PlacesRepository {
     }
 
     fun closeOffer(offerId: Int) {
-        for (p in places) {
-            val off = p.offers.find { it.id == offerId }
-            if (off != null) {
-                off.status = "cancelled"
-                off.quantityLeft = 0
-                break
+        runBlocking(Dispatchers.IO) {
+            try {
+                postRequestJson("$BASE_URL/business/offers/$offerId/close", JSONObject())
+            } catch (_: Exception) {
+            }
+        }
+        synchronized(places) {
+            for (p in places) {
+                val off = p.offers.find { it.id == offerId }
+                if (off != null) {
+                    off.status = "cancelled"
+                    off.quantityLeft = 0
+                    break
+                }
             }
         }
     }
 
     fun computeImpact(): ImpactSummary {
-        val valid = orders.filter { it.status == "reserved" || it.status == "picked_up" }
-        val completed = orders.filter { it.status == "picked_up" }
+        val snapshotOrders = synchronized(orders) { orders.toList() }
+        val valid = snapshotOrders.filter { it.status == "reserved" || it.status == "picked_up" }
+        val completed = snapshotOrders.filter { it.status == "picked_up" }
         var rescuesCount = 0
         var kgSaved = 0.0
         var moneySaved = 0.0
@@ -596,6 +965,199 @@ object PlacesRepository {
             levelProgressPercent = progress,
             badges = badges
         )
+    }
+
+    private fun parsePlaceJson(obj: JSONObject): PlaceItem {
+        val placeId = obj.optInt("id", 0)
+        val offersList = mutableListOf<PlaceOffer>()
+        if (obj.has("offers") && !obj.isNull("offers")) {
+            val arr = obj.getJSONArray("offers")
+            for (i in 0 until arr.length()) {
+                offersList.add(parseOfferJson(arr.getJSONObject(i), placeId))
+            }
+        }
+        val reviewsList = mutableListOf<PlaceReview>()
+        if (obj.has("reviews") && !obj.isNull("reviews")) {
+            val arr = obj.getJSONArray("reviews")
+            for (i in 0 until arr.length()) {
+                reviewsList.add(parseReviewJson(arr.getJSONObject(i), placeId))
+            }
+        }
+        return PlaceItem(
+            id = placeId,
+            name = obj.optString("name", "Establecimiento"),
+            type = obj.optString("type", "fonda"),
+            description = obj.optString("description", ""),
+            address = obj.optString("address", ""),
+            phone = obj.optString("phone", ""),
+            openingHours = obj.optString("opening_hours", "Hoy 9:00-20:00"),
+            lat = obj.optDouble("lat", 19.4326),
+            lng = obj.optDouble("lng", -99.1332),
+            distanceMeters = obj.optInt("distance_m", 250),
+            ratingAvg = obj.optDouble("rating_avg", 4.9),
+            ratingCount = obj.optInt("rating_count", 1),
+            isVerified = obj.optBoolean("is_verified", true),
+            isFavorite = obj.optBoolean("is_favorite", false),
+            offers = offersList,
+            reviews = reviewsList
+        )
+    }
+
+    private fun parseOfferJson(obj: JSONObject, defaultBusinessId: Int): PlaceOffer {
+        val tagsList = mutableListOf<String>()
+        if (obj.has("tags") && !obj.isNull("tags")) {
+            val tArr = obj.optJSONArray("tags")
+            if (tArr != null) {
+                for (i in 0 until tArr.length()) {
+                    val t = tArr.optString(i, "").trim()
+                    if (t.isNotEmpty()) tagsList.add(t)
+                }
+            }
+        }
+        val pickupEnd = obj.optString("pickup_end", "")
+        val windowLabel = formatPickupWindow(pickupEnd)
+        return PlaceOffer(
+            id = obj.optInt("id", 0),
+            businessId = obj.optInt("business_id", defaultBusinessId),
+            title = obj.optString("title", "Oferta de rescate"),
+            description = obj.optString("description", ""),
+            kind = obj.optString("kind", "producto"),
+            originalPrice = obj.optDouble("original_price", 0.0),
+            price = obj.optDouble("price", 0.0),
+            quantityTotal = obj.optInt("quantity_total", 1),
+            quantityLeft = obj.optInt("quantity_left", 1),
+            estWeightKg = obj.optDouble("est_weight_kg", 0.65),
+            pickupWindow = windowLabel,
+            tags = tagsList,
+            allergens = obj.optString("allergens", ""),
+            status = obj.optString("status", "active")
+        )
+    }
+
+    private fun parseReviewJson(obj: JSONObject, defaultBusinessId: Int): PlaceReview {
+        return PlaceReview(
+            id = obj.optInt("id", nextReviewId++),
+            businessId = obj.optInt("business_id", defaultBusinessId),
+            userName = obj.optString("user_name", "Comensal Foodlink"),
+            stars = obj.optInt("stars", 5),
+            comment = obj.optString("comment", "")
+        )
+    }
+
+    private fun parseOrderJson(obj: JSONObject): OrderItem {
+        val pickupEnd = obj.optString("pickup_end", "")
+        return OrderItem(
+            id = obj.optInt("id", 0),
+            userEmail = obj.optString("user_email", currentUserEmail),
+            userName = obj.optString("user_name", "Comensal"),
+            businessId = obj.optInt("business_id", 1),
+            businessName = obj.optString("business_name", "Establecimiento"),
+            businessAddress = obj.optString("business_address", ""),
+            offerId = obj.optInt("offer_id", 0),
+            offerTitle = obj.optString("offer_title", "Oferta de rescate"),
+            quantity = obj.optInt("quantity", 1),
+            unitPrice = obj.optDouble("unit_price", 0.0),
+            originalUnitPrice = obj.optDouble("original_unit_price", 0.0),
+            totalPrice = obj.optDouble("total_price", 0.0),
+            estWeightKg = obj.optDouble("est_weight_kg", 0.65),
+            pickupCode = obj.optString("pickup_code", "FL-000000"),
+            pickupWindow = formatPickupWindow(pickupEnd),
+            status = obj.optString("status", "reserved")
+        )
+    }
+
+    private fun parseImpactJson(obj: JSONObject): ImpactSummary {
+        val badgesList = mutableListOf<ImpactBadge>()
+        if (obj.has("badges") && !obj.isNull("badges")) {
+            val arr = obj.getJSONArray("badges")
+            for (i in 0 until arr.length()) {
+                val b = arr.getJSONObject(i)
+                badgesList.add(
+                    ImpactBadge(
+                        id = b.optString("id", ""),
+                        title = b.optString("title", ""),
+                        description = b.optString("description", ""),
+                        unlocked = b.optBoolean("unlocked", false)
+                    )
+                )
+            }
+        }
+        return ImpactSummary(
+            rescuesCount = obj.optInt("rescues_count", 0),
+            completedCount = obj.optInt("completed_count", 0),
+            kgSaved = obj.optDouble("kg_saved", 0.0),
+            co2AvoidedKg = obj.optDouble("co2_avoided_kg", 0.0),
+            waterLiters = obj.optInt("water_liters", 0),
+            moneySavedMxn = obj.optInt("money_saved_mxn", 0),
+            levelTitle = obj.optString("level_title", "Semilla Solidaria"),
+            nextLevelTitle = obj.optString("next_level_title", "Guardian del Barrio"),
+            nextLevelTarget = obj.optInt("next_level_target", 2),
+            levelProgressPercent = obj.optInt("level_progress_percent", 6),
+            badges = badgesList
+        )
+    }
+
+    private fun formatPickupWindow(isoString: String): String {
+        if (isoString.isBlank()) return "Hoy antes del cierre"
+        return try {
+            val clean = isoString.replace("Z", "+0000")
+            val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.US)
+            val date = parser.parse(clean) ?: return "Hoy antes del cierre"
+            val fmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+            fmt.timeZone = TimeZone.getDefault()
+            "Recoger antes de las ${fmt.format(date)}"
+        } catch (_: Exception) {
+            "Hoy antes del cierre"
+        }
+    }
+
+    private fun getRequestJson(urlString: String): JSONObject? {
+        var connection: HttpURLConnection? = null
+        return try {
+            val url = URL(urlString)
+            connection = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = TIMEOUT_MS
+                readTimeout = TIMEOUT_MS
+                setRequestProperty("Accept", "application/json")
+            }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else (connection.errorStream ?: connection.inputStream)
+            val text = BufferedReader(InputStreamReader(stream, "UTF-8")).use { it.readText() }
+            JSONObject(text)
+        } catch (_: Exception) {
+            null
+        } finally {
+            connection?.disconnect()
+        }
+    }
+
+    private fun postRequestJson(urlString: String, body: JSONObject): JSONObject? {
+        var connection: HttpURLConnection? = null
+        return try {
+            val url = URL(urlString)
+            connection = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                connectTimeout = TIMEOUT_MS
+                readTimeout = TIMEOUT_MS
+                doOutput = true
+                doInput = true
+                setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                setRequestProperty("Accept", "application/json")
+            }
+            OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
+                writer.write(body.toString())
+                writer.flush()
+            }
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else (connection.errorStream ?: connection.inputStream)
+            val text = BufferedReader(InputStreamReader(stream, "UTF-8")).use { it.readText() }
+            JSONObject(text)
+        } catch (_: Exception) {
+            null
+        } finally {
+            connection?.disconnect()
+        }
     }
 
     private fun generatePickupCode(): String {

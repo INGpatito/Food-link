@@ -9,6 +9,7 @@
  */
 
 import { getStoredUser, setStoredUser, clearStoredUser, type AuthUser } from '../utils/auth.ts';
+import { sendVerificationEmail } from '../services/emailService.ts';
 import {
     fetchNearby, fetchOrdersAndImpact, cancelOrder, toggleFavorite,
     fetchBusinessPanel, registerBusiness, publishBusinessOffer,
@@ -239,6 +240,20 @@ function init(): void {
     mainEl.addEventListener('change', onMainChange);
     mainEl.addEventListener('submit', onMainSubmit);
 
+    window.addEventListener('focus', () => {
+        void loadAllProfileData();
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            void loadAllProfileData();
+        }
+    });
+    window.setInterval(() => {
+        if (document.visibilityState === 'visible' && !document.activeElement?.matches('input, select, textarea')) {
+            void loadAllProfileData();
+        }
+    }, 12000);
+
     renderAll();
     void loadAllProfileData();
 }
@@ -248,14 +263,26 @@ async function loadAllProfileData(): Promise<void> {
     const identity = getActiveUserIdentity();
 
     try {
-        const [ordersRes, nearbyRes, bizRes, profRes] = await Promise.all([
+        const [ordersRes, nearbyRes, bizRes, profRes, meRes] = await Promise.all([
             fetchOrdersAndImpact(identity.email),
             fetchNearby(state.center, 10000, 'all', { email: identity.email, withoutOffers: true }),
             fetchBusinessPanel(identity.email, state.selectedBusinessId, state.center),
             fetch(`/api/places/profile?user_email=${encodeURIComponent(identity.email)}`)
                 .then((r) => (r.ok ? r.json() : null))
-                .catch(() => null)
+                .catch(() => null),
+            identity.isLogged
+                ? fetch(`/api/auth/me?email=${encodeURIComponent(identity.email)}`)
+                    .then((r) => (r.ok ? r.json() : null))
+                    .catch(() => null)
+                : Promise.resolve(null)
         ]);
+
+        if (meRes?.success && meRes.user) {
+            const stored = getStoredUser();
+            if (stored && (stored.name !== meRes.user.name || stored.is_verified !== meRes.user.is_verified)) {
+                setStoredUser(meRes.user as AuthUser);
+            }
+        }
 
         state.orders = ordersRes.orders;
         state.impact = ordersRes.impact;
@@ -269,6 +296,12 @@ async function loadAllProfileData(): Promise<void> {
             if (Array.isArray(profRes.profile.dietary_tags) && profRes.profile.dietary_tags.length > 0) {
                 state.prefs.dietTags = profRes.profile.dietary_tags;
                 savePrefs(state.prefs);
+            }
+            if (profRes.profile.pickup_alias) {
+                const stored = getStoredUser();
+                if (stored && stored.name !== profRes.profile.pickup_alias) {
+                    setStoredUser({ ...stored, name: profRes.profile.pickup_alias });
+                }
             }
         }
     } catch (err) {
@@ -285,6 +318,7 @@ function setTab(tab: ProfileTab): void {
     url.searchParams.set('tab', tab);
     history.replaceState(null, '', url);
     renderAll();
+    void loadAllProfileData();
 }
 
 function renderAll(): void {
@@ -1061,6 +1095,9 @@ async function onMainSubmit(e: Event): Promise<void> {
             if (!res.ok || !data.success) {
                 toast(data.message || 'No se pudo autenticar con el servidor.');
                 return;
+            }
+            if (state.authMode === 'register' && !data.emailSent && data.verificationCode) {
+                await sendVerificationEmail(email, name || 'Comensal Foodlink', data.verificationCode);
             }
             if (data.user) {
                 setStoredUser(data.user as AuthUser);

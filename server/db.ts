@@ -67,6 +67,31 @@ export async function createUser(
   };
 }
 
+export async function updateUnverifiedUser(
+  id: number,
+  name: string,
+  email: string,
+  passwordHash: string,
+  verificationToken: string
+): Promise<UserRow> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const trimmedName = name.trim();
+
+  await pool.query<mysql.ResultSetHeader>(
+    'UPDATE users SET name = ?, password_hash = ?, verification_token = ?, is_verified = 0 WHERE id = ?',
+    [trimmedName, passwordHash, verificationToken, id]
+  );
+
+  return {
+    id,
+    name: trimmedName,
+    email: normalizedEmail,
+    password_hash: passwordHash,
+    is_verified: 0,
+    verification_token: verificationToken
+  };
+}
+
 export async function verifyUserToken(email: string, token: string): Promise<boolean> {
   const normalizedEmail = email.trim().toLowerCase();
   const trimmedToken = token.trim();

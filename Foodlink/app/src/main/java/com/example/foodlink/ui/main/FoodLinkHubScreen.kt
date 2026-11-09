@@ -67,6 +67,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -112,6 +113,7 @@ import com.example.foodlink.ui.theme.BrandSurface
 import com.example.foodlink.ui.theme.BrandTextMuted
 import com.example.foodlink.ui.theme.BrandTextPrimary
 import com.example.foodlink.ui.theme.BrandTextSecondary
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val SageColor = Color(0xFF8AB17D)
@@ -156,6 +158,23 @@ fun FoodLinkHubScreen(
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(msg)
+        }
+    }
+
+    // Sincronizacion inmediata con el servidor https://papoys.me/api/places al cambiar de pestaña
+    LaunchedEffect(user.email, bottomTab, profileSubTab, selectedPlaceId) {
+        if (PlacesRepository.syncWithServer(user.email)) {
+            refreshTick++
+        }
+    }
+
+    // Sincronizacion periodica en tiempo real entre Web y Android cada 10 segundos
+    LaunchedEffect(user.email) {
+        while (true) {
+            delay(10000L)
+            if (PlacesRepository.syncWithServer(user.email)) {
+                refreshTick++
+            }
         }
     }
 
@@ -1796,7 +1815,11 @@ private fun ProfileAccountSubSection(
 ) {
     val firstName = user.name.trim().split(" ").firstOrNull() ?: user.name
     var editableName by remember(user.name) { mutableStateOf(user.name) }
-    val selectedTags = remember { mutableStateListOf("Sin restricciones", "Comida corrida casera") }
+    val selectedTags = remember {
+        mutableStateListOf<String>().apply {
+            addAll(PlacesRepository.getUserDietTags())
+        }
+    }
     val allTags = listOf(
         "Sin restricciones",
         "Vegetariano",
@@ -1988,6 +2011,7 @@ private fun ProfileAccountSubSection(
             Button(
                 onClick = {
                     if (editableName.isNotBlank()) {
+                        PlacesRepository.saveUserProfile(user.email, editableName.trim(), selectedTags.toList())
                         onUpdateUserName(editableName.trim())
                     }
                 },

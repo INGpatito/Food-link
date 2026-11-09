@@ -386,6 +386,24 @@ function init(): void {
     window.setTimeout(() => map.invalidateSize(), 120);
     window.addEventListener('resize', () => map.invalidateSize(), { passive: true });
     window.setInterval(updateCountdowns, 30000);
+
+    // Sincronizacion automatica con el servidor y con la app Android
+    window.addEventListener('focus', () => {
+        void refreshPlacesQuietly();
+        void refreshUserOrdersQuietly();
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            void refreshPlacesQuietly();
+            void refreshUserOrdersQuietly();
+        }
+    });
+    window.setInterval(() => {
+        if (document.visibilityState === 'visible' && !state.loading && !state.navigating) {
+            void refreshPlacesQuietly();
+            void refreshUserOrdersQuietly();
+        }
+    }, 15000);
 }
 
 function applyMapStyle(styleId: MapStyleId): void {
@@ -863,6 +881,37 @@ async function loadPlaces(): Promise<void> {
         state.error = (error as Error).message || 'No se pudieron cargar los lugares.';
         renderPanel();
         updateSheetSummary();
+    }
+}
+
+async function refreshPlacesQuietly(): Promise<void> {
+    try {
+        const identity = getActiveUserIdentity();
+        const data = await fetchNearby(
+            state.center,
+            state.radius,
+            state.filter,
+            { category: state.category, email: identity.email }
+        );
+        state.places = data.places;
+        if (data.favorite_ids) {
+            state.favoriteIds = new Set(data.favorite_ids);
+        }
+        state.favoriteAlerts = data.active_favorite_alerts ?? [];
+        state.serverOffsetMs = Date.parse(data.server_time) - Date.now();
+        renderMarkers();
+        renderTabs();
+        if (state.view === 'list' || state.view === 'favorites') {
+            renderPanel();
+            updateSheetSummary();
+        } else if (state.view === 'detail' && state.selectedId !== null) {
+            const detail = await fetchPlace(state.selectedId, state.userPos ?? state.center, identity.email);
+            const idx = state.places.findIndex((p) => p.id === state.selectedId);
+            if (idx >= 0) state.places[idx] = detail.place;
+            renderPanel();
+        }
+    } catch {
+        // silencioso
     }
 }
 

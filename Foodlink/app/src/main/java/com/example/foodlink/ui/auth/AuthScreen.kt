@@ -45,6 +45,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -97,6 +98,15 @@ fun AuthScreen(sessionManager: SessionManager) {
         }
     }
     var currentUser by remember { mutableStateOf(initialUser) }
+
+    LaunchedEffect(currentUser?.email) {
+        val email = currentUser?.email ?: return@LaunchedEffect
+        val meRes = AuthApi.fetchMe(email)
+        if (meRes.success && meRes.user != null) {
+            sessionManager.saveUser(meRes.user)
+            currentUser = meRes.user
+        }
+    }
 
     // Solo muestra Explorar Mapa y Mi Perfil despues de iniciar sesion con una cuenta real
     if (currentUser != null) {
@@ -503,11 +513,19 @@ fun AuthFormScreen(
                                     coroutineScope.launch {
                                         isLoading = true
                                         errorMessage = null
+                                        successMessage = null
                                         val response = AuthApi.login(loginEmail, loginPassword)
-                                        isLoading = false
                                         if (response.success && response.user != null) {
+                                            isLoading = false
                                             onLoginSuccess(response.user)
+                                        } else if (response.message.contains("verifica tu cuenta", ignoreCase = true)) {
+                                            pendingVerificationEmail = loginEmail.trim().lowercase()
+                                            AuthApi.resendCode(pendingVerificationEmail)
+                                            isLoading = false
+                                            inVerificationMode = true
+                                            successMessage = "Te enviamos un nuevo código de 6 dígitos a tu correo para activar tu cuenta."
                                         } else {
+                                            isLoading = false
                                             errorMessage = response.message
                                         }
                                     }
@@ -528,11 +546,19 @@ fun AuthFormScreen(
                                 coroutineScope.launch {
                                     isLoading = true
                                     errorMessage = null
+                                    successMessage = null
                                     val response = AuthApi.login(loginEmail, loginPassword)
-                                    isLoading = false
                                     if (response.success && response.user != null) {
+                                        isLoading = false
                                         onLoginSuccess(response.user)
+                                    } else if (response.message.contains("verifica tu cuenta", ignoreCase = true)) {
+                                        pendingVerificationEmail = loginEmail.trim().lowercase()
+                                        AuthApi.resendCode(pendingVerificationEmail)
+                                        isLoading = false
+                                        inVerificationMode = true
+                                        successMessage = "Te enviamos un nuevo código de 6 dígitos a tu correo para activar tu cuenta."
                                     } else {
+                                        isLoading = false
                                         errorMessage = response.message
                                     }
                                 }
@@ -781,9 +807,13 @@ fun AuthFormScreen(
                             TextButton(
                                 onClick = {
                                     coroutineScope.launch {
-                                        val res = AuthApi.resendCode(pendingVerificationEmail)
+                                        isLoading = true
+                                        errorMessage = null
+                                        successMessage = null
+                                        val res = AuthApi.resendCode(pendingVerificationEmail, registerName.ifBlank { "Usuario" })
+                                        isLoading = false
                                         if (res.success) {
-                                            successMessage = "Nuevo código enviado a tu correo."
+                                            successMessage = "Nuevo código de 6 dígitos enviado a $pendingVerificationEmail."
                                         } else {
                                             errorMessage = res.message
                                         }

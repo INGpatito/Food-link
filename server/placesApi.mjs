@@ -498,32 +498,47 @@ async function ensureDemoDataNear(pool, lat, lng) {
   const [[counts]] = await pool.query(
     'SELECT SUM(is_demo = 0) AS real_count, SUM(is_demo = 1) AS demo_count FROM businesses'
   );
-  if (Number(counts?.real_count || 0) > 0) return;
+  const demoCount = Number(counts?.demo_count || 0);
 
-  const dLat = MAX_RADIUS_M / 111320;
-  const dLng = MAX_RADIUS_M / (111320 * Math.max(0.01, Math.cos((lat * Math.PI) / 180)));
-  const [nearbyDemo] = await pool.query(
-    'SELECT id FROM businesses WHERE is_demo = 1 AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 1',
-    [lat - dLat, lat + dLat, lng - dLng, lng + dLng]
-  );
-
-  if (nearbyDemo.length === 0) {
-    if (Number(counts?.demo_count || 0) > 0) {
-      await pool.query('DELETE FROM businesses WHERE is_demo = 1');
-    }
+  if (demoCount === 0 && Number(counts?.real_count || 0) === 0) {
     await seedDemoPlacesAt(pool, lat, lng);
     return;
   }
 
-  await pool.query(
-    `UPDATE offers o
-     JOIN businesses b ON b.id = o.business_id
-     SET o.pickup_start = DATE_SUB(NOW(), INTERVAL 20 MINUTE),
-         o.pickup_end = DATE_ADD(NOW(), INTERVAL 3 HOUR),
-         o.quantity_left = o.quantity_total,
-         o.status = 'active'
-     WHERE b.is_demo = 1 AND (o.pickup_end <= NOW() OR o.quantity_left <= 0)`
-  );
+  if (demoCount > 0) {
+    const dLat = MAX_RADIUS_M / 111320;
+    const dLng = MAX_RADIUS_M / (111320 * Math.max(0.01, Math.cos((lat * Math.PI) / 180)));
+    const [nearbyDemo] = await pool.query(
+      'SELECT id FROM businesses WHERE is_demo = 1 AND lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? LIMIT 1',
+      [lat - dLat, lat + dLat, lng - dLng, lng + dLng]
+    );
+
+    // Si los negocios demo estan en otra ciudad, reubicamos sus coordenadas en sitio
+    // SIN borrar las filas para conservar sus IDs, reservas QR, favoritos y resenas
+    if (nearbyDemo.length === 0) {
+      const [demoRows] = await pool.query('SELECT id FROM businesses WHERE is_demo = 1 ORDER BY id ASC');
+      const cosLat = Math.max(0.01, Math.cos((lat * Math.PI) / 180));
+      for (let i = 0; i < demoRows.length; i++) {
+        const tpl = DEMO_PLACES[i % DEMO_PLACES.length];
+        const pLat = lat + tpl.dLatM / 111320;
+        const pLng = lng + tpl.dLngM / (111320 * cosLat);
+        await pool.query(
+          'UPDATE businesses SET lat = ?, lng = ? WHERE id = ?',
+          [pLat.toFixed(6), pLng.toFixed(6), demoRows[i].id]
+        );
+      }
+    }
+
+    await pool.query(
+      `UPDATE offers o
+       JOIN businesses b ON b.id = o.business_id
+       SET o.pickup_start = DATE_SUB(NOW(), INTERVAL 20 MINUTE),
+           o.pickup_end = DATE_ADD(NOW(), INTERVAL 3 HOUR),
+           o.quantity_left = o.quantity_total,
+           o.status = 'active'
+       WHERE b.is_demo = 1 AND (o.pickup_end <= NOW() OR o.quantity_left <= 0)`
+    );
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -644,6 +659,36 @@ async function loadActiveOffers(pool, businessIds) {
   return byBusiness;
 }
 
+async function loadReviewsByBusiness(pool, businessIds) {
+  const byBusiness = new Map();
+  if (businessIds.length === 0) return byBusiness;
+
+  const [rows] = await pool.query(
+    `SELECT id, business_id, user_name, stars, comment, created_at
+     FROM reviews
+     WHERE business_id IN (?)
+     ORDER BY created_at DESC`,
+    [businessIds]
+  );
+
+  for (const r of rows) {
+    const bid = Number(r.business_id);
+    if (!byBusiness.has(bid)) byBusiness.set(bid, []);
+    const list = byBusiness.get(bid);
+    if (list.length < 15) {
+      list.push({
+        id: Number(r.id),
+        business_id: bid,
+        user_name: r.user_name,
+        stars: Number(r.stars),
+        comment: r.comment,
+        created_at: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at)
+      });
+    }
+  }
+  return byBusiness;
+}
+
 async function loadUserFavoriteIds(pool, email) {
   if (!email) return new Set();
   const [rows] = await pool.query(
@@ -747,11 +792,17 @@ async function handleNearby(url, pool, dbReady) {
     [lat, lat, lng, lat - dLat, lat + dLat, lng - dLng, lng + dLng, radius]
   );
 
-  const offersByBusiness = await loadActiveOffers(pool, rows.map((r) => r.id));
+  const bizIds = rows.map((r) => r.id);
+  const [offersByBusiness, reviewsByBusiness] = await Promise.all([
+    loadActiveOffers(pool, bizIds),
+    loadReviewsByBusiness(pool, bizIds)
+  ]);
 
   const allPlaces = rows.map((row) => {
     const offers = (offersByBusiness.get(row.id) || []).filter(filterOfferFn);
-    return serializePlace(row, offers, favSet.has(Number(row.id)));
+    const place = serializePlace(row, offers, favSet.has(Number(row.id)));
+    place.reviews = reviewsByBusiness.get(Number(row.id)) || [];
+    return place;
   });
 
   const activeFavoriteAlerts = allPlaces

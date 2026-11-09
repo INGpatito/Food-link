@@ -34,22 +34,22 @@ export class Modals {
                     <form id="foodlink-form" class="space-y-4">
                         <div>
                             <label class="block font-mono text-[10px] uppercase tracking-widest text-cream/70 mb-1.5">NOMBRE DEL ESTABLECIMIENTO</label>
-                            <input type="text" required placeholder="Ej. Fonda Santa Clara / Obrador La Espiga" class="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
+                            <input type="text" name="name" required placeholder="Ej. Fonda Santa Clara / Obrador La Espiga" class="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block font-mono text-[10px] uppercase tracking-widest text-cream/70 mb-1.5">CATEGORIA CULINARIA</label>
-                                <select class="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
+                                <select name="type" class="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
                                     <option value="fonda" class="bg-obsidian text-cream">Fonda Tradicional</option>
                                     <option value="restaurante" class="bg-obsidian text-cream">Restaurante</option>
-                                    <option value="cocina" class="bg-obsidian text-cream">Cocina Economica / De Autor</option>
+                                    <option value="cafeteria" class="bg-obsidian text-cream">Cafeteria / Cocina de Autor</option>
                                     <option value="panaderia" class="bg-obsidian text-cream">Panaderia / Pasteleria</option>
                                 </select>
                             </div>
                             <div>
                                 <label class="block font-mono text-[10px] uppercase tracking-widest text-cream/70 mb-1.5">EXCEDENTE ESTIMADO DIARIO</label>
-                                <select class="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
+                                <select name="surplus" class="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
                                     <option value="5-15" class="bg-obsidian text-cream">5 a 15 porciones</option>
                                     <option value="15-40" class="bg-obsidian text-cream">15 a 40 porciones</option>
                                     <option value="40+" class="bg-obsidian text-cream">Mas de 40 porciones</option>
@@ -59,7 +59,7 @@ export class Modals {
 
                         <div>
                             <label class="block font-mono text-[10px] uppercase tracking-widest text-cream/70 mb-1.5">CORREO O CONTACTO DIRECTO</label>
-                            <input type="email" required placeholder="contacto@tucocina.mx" class="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
+                            <input type="email" name="email" required placeholder="contacto@tucocina.mx" class="w-full px-4 py-3 rounded-xl bg-white/[0.05] border border-white/10 text-cream text-sm focus:outline-none focus:border-terracotta transition-colors">
                         </div>
 
                         <div id="form-feedback" class="hidden p-3.5 rounded-xl bg-sage/20 border border-sage/40 text-sage font-mono text-xs">
@@ -119,13 +119,55 @@ export class Modals {
         this.modalContent.classList.replace('scale-100', 'scale-95');
     }
 
-    private handleSubmit(e: Event): void {
+    private async handleSubmit(e: Event): Promise<void> {
         e.preventDefault();
         if (this.formFeedback) {
             this.formFeedback.classList.remove('hidden');
         }
+        if (this.formEl) {
+            const fd = new FormData(this.formEl);
+            const name = String(fd.get('name') || '').trim();
+            const type = String(fd.get('type') || 'fonda').trim();
+            const surplus = String(fd.get('surplus') || '5-15').trim();
+            const email = String(fd.get('email') || '').trim().toLowerCase();
+            let lat = 19.4326;
+            let lng = -99.1332;
+            try {
+                const rawCenter = localStorage.getItem('foodlink_last_center');
+                if (rawCenter) {
+                    const parsed = JSON.parse(rawCenter);
+                    if (Number.isFinite(parsed?.lat) && Number.isFinite(parsed?.lng)) {
+                        lat = parsed.lat;
+                        lng = parsed.lng;
+                    }
+                }
+            } catch {
+                // usar centro por defecto
+            }
+            if (name) {
+                try {
+                    await fetch('/api/places/business', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email,
+                            name,
+                            type,
+                            description: `Cocina aliada de rescate (${surplus} porciones diarias estimadas).`,
+                            address: 'Centro de la ciudad',
+                            phone: '',
+                            opening_hours: 'Lun-Sab 9:00-21:00',
+                            lat,
+                            lng
+                        })
+                    });
+                } catch {
+                    // continuar a panel de negocio
+                }
+            }
+        }
         setTimeout(() => {
-            window.location.href = '/explorar/?tab=negocio';
-        }, 1200);
+            window.location.href = '/perfil/?tab=negocio';
+        }, 900);
     }
 }

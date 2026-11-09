@@ -7,14 +7,18 @@ export interface SendEmailResult {
   message: string;
 }
 
+const DEFAULT_SERVICE_ID = 'service_hsjvuns';
+const DEFAULT_TEMPLATE_ID = 'template_pu7i0mf';
+const DEFAULT_PUBLIC_KEY = 'RgCYeiuLtXTQ4fF_9';
+
 export async function sendVerificationEmail(
   toEmail: string,
   toName: string,
   code: string
 ): Promise<SendEmailResult> {
-  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID?.trim();
-  const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID?.trim();
-  const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY?.trim();
+  const serviceId = (import.meta.env.VITE_EMAILJS_SERVICE_ID || DEFAULT_SERVICE_ID).trim();
+  const templateId = (import.meta.env.VITE_EMAILJS_TEMPLATE_ID || DEFAULT_TEMPLATE_ID).trim();
+  const publicKey = (import.meta.env.VITE_EMAILJS_PUBLIC_KEY || DEFAULT_PUBLIC_KEY).trim();
 
   // Si las credenciales de EmailJS aun no han sido provistas, se activa el modo simulacion
   if (!serviceId || !templateId || !publicKey) {

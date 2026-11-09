@@ -2,6 +2,7 @@ import http from 'node:http';
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
 import { handlePlacesRequest, ensurePlacesSchema } from './placesApi.mjs';
+import { sendVerificationEmailServer } from './emailSender.mjs';
 
 const PORT = Number(process.env.API_PORT || process.env.PORT || 3005);
 const DB_HOST = process.env.DB_HOST || '127.0.0.1';
@@ -92,29 +93,42 @@ const server = http.createServer(async (req, res) => {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
-      const [existing] = await pool.query('SELECT id FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
-      if (existing.length > 0) {
+      const [existing] = await pool.query('SELECT id, is_verified FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
+      if (existing.length > 0 && Boolean(existing[0].is_verified)) {
         return sendJson(res, 409, { success: false, message: 'Este correo electronico ya se encuentra registrado.' });
       }
 
       const passwordHash = await bcrypt.hash(password, 10);
       const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+      let userId;
 
-      const [result] = await pool.query(
-        'INSERT INTO users (name, email, password_hash, is_verified, verification_token) VALUES (?, ?, ?, 0, ?)',
-        [name.trim(), normalizedEmail, passwordHash, verificationCode]
-      );
+      if (existing.length > 0) {
+        userId = existing[0].id;
+        await pool.query(
+          'UPDATE users SET name = ?, password_hash = ?, is_verified = 0, verification_token = ? WHERE id = ?',
+          [name.trim(), passwordHash, verificationCode, userId]
+        );
+      } else {
+        const [result] = await pool.query(
+          'INSERT INTO users (name, email, password_hash, is_verified, verification_token) VALUES (?, ?, ?, 0, ?)',
+          [name.trim(), normalizedEmail, passwordHash, verificationCode]
+        );
+        userId = result.insertId;
+      }
+
+      const emailResult = await sendVerificationEmailServer(normalizedEmail, name.trim(), verificationCode);
 
       return sendJson(res, 201, {
         success: true,
-        message: 'Registro exitoso.',
+        message: 'Registro exitoso. Se ha enviado un codigo de verificacion a tu correo.',
         user: {
-          id: result.insertId,
+          id: userId,
           name: name.trim(),
           email: normalizedEmail,
           is_verified: false
         },
-        verificationCode
+        verificationCode,
+        emailSent: emailResult.sent
       });
     }
 
@@ -202,7 +216,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
-      const [rows] = await pool.query('SELECT id, is_verified FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
+      const [rows] = await pool.query('SELECT id, name, email, is_verified FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
       if (rows.length === 0) {
         return sendJson(res, 404, { success: false, message: 'Usuario no encontrado.' });
       }
@@ -214,10 +228,13 @@ const server = http.createServer(async (req, res) => {
       const newCode = String(Math.floor(100000 + Math.random() * 900000));
       await pool.query('UPDATE users SET verification_token = ? WHERE id = ?', [newCode, rows[0].id]);
 
+      const emailResult = await sendVerificationEmailServer(rows[0].email || normalizedEmail, rows[0].name || 'Comensal Foodlink', newCode);
+
       return sendJson(res, 200, {
         success: true,
-        message: 'Nuevo codigo generado.',
-        verificationCode: newCode
+        message: 'Nuevo codigo generado y enviado a tu correo.',
+        verificationCode: newCode,
+        emailSent: emailResult.sent
       });
     }
 
