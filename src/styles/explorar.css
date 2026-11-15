@@ -1334,9 +1334,14 @@ a { color: var(--fx-saffron); -webkit-tap-highlight-color: transparent; }
 /* Estilos de teselas de Leaflet                                       */
 /* ------------------------------------------------------------------ */
 
+.fx-app .fx-map.leaflet-container,
 .leaflet-container {
     background: var(--fx-bg);
     font-family: var(--fx-font);
+}
+
+.fx-app[data-map-style="light"] .fx-map.leaflet-container {
+    background: #ebe6dc;
 }
 
 /* Modo Oscuro Calido (Voyager @2x invertido con rotacion de tono):
@@ -1356,6 +1361,12 @@ a { color: var(--fx-saffron); -webkit-tap-highlight-color: transparent; }
 .leaflet-tile.fx-tiles-night-boost,
 .fx-tiles-night-boost .leaflet-tile {
     filter: brightness(1.42) contrast(1.22);
+}
+
+/* Modo Nocturno sobre capas claras de respaldo (OSM HOT / Esri sin API key) */
+.leaflet-tile.fx-tiles-night-invert,
+.fx-tiles-night-invert .leaflet-tile {
+    filter: invert(1) hue-rotate(180deg) saturate(0.32) brightness(0.84) contrast(1.16);
 }
 
 .leaflet-control-attribution {

@@ -22,7 +22,16 @@ jobs:
         run: npm install --force
 
       - name: Construir la aplicacion
-        run: npm run build
+        env:
+          VITE_CARTO_API_KEY: ${{ secrets.VITE_CARTO_API_KEY }}
+        run: |
+          if [ -z "$VITE_CARTO_API_KEY" ] && [ -f /home/orangepi/Food-link/footlink/.env ]; then
+            VAL=$(grep -m1 '^VITE_CARTO_API_KEY=' /home/orangepi/Food-link/footlink/.env | cut -d= -f2- | tr -d '\r"' | sed "s/^'//;s/'$//" || true)
+            if [ -n "$VAL" ]; then
+              export VITE_CARTO_API_KEY="$VAL"
+            fi
+          fi
+          npm run build
 
       - name: Desplegar a Nginx
         run: rsync -av --delete ./dist/ /home/orangepi/Food-link/footlink/dist/

@@ -45,10 +45,29 @@ const RADIUS_OPTIONS = [1000, 3000, 5000, 10000];
 const MOBILE_QUERY = window.matchMedia('(max-width: 860px)');
 
 // La clave se lee solo desde .env (VITE_CARTO_API_KEY); nunca se escribe en el codigo.
-// Si no esta configurada, se usan los basemaps publicos de CARTO sin parametro `key`.
+// Si falta o CARTO la rechaza ("API KEY REQUIRED"), el mapa usa capas publicas sin clave.
 const CARTO_KEY = String(import.meta.env.VITE_CARTO_API_KEY || '').trim();
 const CARTO_KEY_QUERY = CARTO_KEY ? `?key=${encodeURIComponent(CARTO_KEY)}` : '';
 const RETINA = typeof window !== 'undefined' && window.devicePixelRatio > 1 ? '@2x' : '';
+
+type TileProviderId = 'carto' | 'osm_hot' | 'esri';
+
+interface ResolvedTileSpec {
+    provider: TileProviderId;
+    url: string;
+    className: string;
+    subdomains?: string;
+    maxNativeZoom: number;
+    attribution: string;
+}
+
+const PROVIDER_ORDER: readonly TileProviderId[] = CARTO_KEY
+    ? ['carto', 'osm_hot', 'esri']
+    : ['osm_hot', 'esri'];
+
+let activeProviderIndex = 0;
+let cartoProbePromise: Promise<void> | null = null;
+let cartoRejected = !CARTO_KEY;
 
 type MapStyleId = 'dark' | 'light' | 'night';
 
@@ -406,6 +425,92 @@ function init(): void {
     }, 15000);
 }
 
+function getCurrentProvider(): TileProviderId {
+    const provider = PROVIDER_ORDER[activeProviderIndex] ?? 'esri';
+    if (provider === 'carto' && cartoRejected) {
+        const nextIdx = PROVIDER_ORDER.indexOf('osm_hot');
+        return nextIdx >= 0 ? PROVIDER_ORDER[nextIdx] : 'esri';
+    }
+    return provider;
+}
+
+function getTileSpec(styleId: MapStyleId): ResolvedTileSpec {
+    const provider = getCurrentProvider();
+    const cfg = MAP_STYLES[styleId] ?? MAP_STYLES.dark;
+
+    if (provider === 'carto' && CARTO_KEY && !cartoRejected) {
+        return {
+            provider: 'carto',
+            url: cfg.url,
+            className: cfg.className,
+            subdomains: 'abcd',
+            maxNativeZoom: 18,
+            attribution: TILE_ATTRIBUTION
+        };
+    }
+
+    const fallbackClass = styleId === 'light'
+        ? 'fx-tiles-voyager-light'
+        : styleId === 'night'
+            ? 'fx-tiles-night-invert'
+            : 'fx-tiles-voyager-dark';
+
+    if (provider === 'osm_hot') {
+        return {
+            provider: 'osm_hot',
+            url: 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png',
+            className: fallbackClass,
+            subdomains: 'abc',
+            maxNativeZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> (HOT) | Rutas: <a href="https://routing.openstreetmap.de" target="_blank" rel="noopener">FOSSGIS</a>'
+        };
+    }
+
+    return {
+        provider: 'esri',
+        url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+        className: fallbackClass,
+        maxNativeZoom: 19,
+        attribution: '&copy; Esri, <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> | Rutas: <a href="https://routing.openstreetmap.de" target="_blank" rel="noopener">FOSSGIS</a>'
+    };
+}
+
+function fallbackFromProvider(failedProvider: TileProviderId): boolean {
+    if (failedProvider === 'carto') {
+        cartoRejected = true;
+    }
+    const currentIdx = PROVIDER_ORDER.indexOf(failedProvider);
+    const nextIdx = currentIdx >= 0 ? currentIdx + 1 : activeProviderIndex + 1;
+    if (nextIdx < PROVIDER_ORDER.length) {
+        activeProviderIndex = nextIdx;
+        return true;
+    }
+    return false;
+}
+
+function ensureCartoKeyValid(): void {
+    if (cartoRejected || cartoProbePromise || !CARTO_KEY) return;
+    const probeUrl = `https://a.basemaps.cartocdn.com/rastertiles/voyager/15/7361/14585.png${CARTO_KEY_QUERY}`;
+    cartoProbePromise = fetch(probeUrl, { cache: 'no-store' })
+        .then(async (res) => {
+            if (res.status === 401 || res.status === 403 || res.status === 429) {
+                throw new Error(`CARTO status ${res.status}`);
+            }
+            if (!res.ok) return;
+            const blob = await res.blob();
+            // CARTO devuelve HTTP 200 con imagen placeholder ~2 KB ("API KEY REQUIRED") cuando la clave no es valida
+            if (blob.size > 0 && blob.size < 4500) {
+                throw new Error(`CARTO placeholder tile (${blob.size}B)`);
+            }
+        })
+        .catch((err) => {
+            const msg = String(err?.message || '');
+            if (msg.startsWith('CARTO ') && fallbackFromProvider('carto') && map) {
+                applyMapStyle(state.mapStyle);
+            }
+        });
+}
+
 function applyMapStyle(styleId: MapStyleId): void {
     state.mapStyle = styleId;
     appEl.dataset.mapStyle = styleId;
@@ -418,33 +523,56 @@ function applyMapStyle(styleId: MapStyleId): void {
         // ignorar
     }
 
+    const spec = getTileSpec(styleId);
+    if (spec.provider === 'carto') {
+        ensureCartoKeyValid();
+    }
+
     if (baseTileLayer) {
         map.removeLayer(baseTileLayer);
     }
 
-    baseTileLayer = L.tileLayer(cfg.url, {
-        subdomains: 'abcd',
+    let layerErrors = 0;
+    let switchedLayer = false;
+
+    const layer = L.tileLayer(spec.url, {
+        ...(spec.subdomains ? { subdomains: spec.subdomains } : {}),
         minZoom: 3,
-        maxNativeZoom: 18,
+        maxNativeZoom: spec.maxNativeZoom,
         maxZoom: 20,
         keepBuffer: 6,
         updateWhenIdle: false,
         updateWhenZooming: false,
-        crossOrigin: true,
-        attribution: TILE_ATTRIBUTION,
-        className: cfg.className
+        attribution: spec.attribution,
+        className: spec.className
     });
 
-    baseTileLayer.on('tileerror', (evt: L.TileErrorEvent) => {
+    layer.on('tileerror', (evt: L.TileErrorEvent) => {
+        if (baseTileLayer !== layer) return;
         const img = evt.tile as HTMLImageElement | undefined;
-        if (!img || img.dataset.retried === '1') return;
-        img.dataset.retried = '1';
-        window.setTimeout(() => {
-            const sep = img.src.includes('?') ? '&' : '?';
-            img.src = `${img.src}${sep}retry=${Date.now()}`;
-        }, 600);
+        if (!img) return;
+        if (!img.dataset.retried) {
+            img.dataset.retried = '1';
+            window.setTimeout(() => {
+                if (baseTileLayer !== layer) return;
+                const sep = img.src.includes('?') ? '&' : '?';
+                img.src = `${img.src}${sep}retry=${Date.now()}`;
+            }, 600);
+            return;
+        }
+        if (img.dataset.retried === '1') {
+            img.dataset.retried = '2';
+            layerErrors += 1;
+            if (!switchedLayer && layerErrors >= 3) {
+                switchedLayer = true;
+                if (fallbackFromProvider(spec.provider)) {
+                    applyMapStyle(state.mapStyle);
+                }
+            }
+        }
     });
 
+    baseTileLayer = layer;
     baseTileLayer.addTo(map);
     baseTileLayer.bringToBack();
 }
