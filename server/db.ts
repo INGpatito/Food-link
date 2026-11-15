@@ -13,9 +13,9 @@ export interface UserRow {
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'orangepi4pro',
-  port: Number(process.env.DB_PORT) || 3306,
+  port: Number(process.env.DB_PORT) || 3306, // puerto 80
   user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'pato',
+  password: process.env.DB_PASSWORD || 'pato', 
   database: process.env.DB_NAME || 'FOODLINK',
   waitForConnections: true,
   connectionLimit: 10,

@@ -1,6 +1,6 @@
 import type { Plugin } from 'vite';
 import type { ServerResponse } from 'node:http';
-import pool from './db.ts';
+import pool from './db.ts'; //FOODLINK -  BD
 import { handlePlacesRequest } from './placesApi.mjs';
 
 function sendJson(res: ServerResponse, statusCode: number, data: unknown) {

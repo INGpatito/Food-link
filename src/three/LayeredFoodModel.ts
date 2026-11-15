@@ -24,7 +24,7 @@ interface LayerDef {
   rotZ: number;
 }
 
-const LAYER_DEFS: LayerDef[] = [
+const LAYER_DEFS: LayerDef[] = [ // Order from bottom to top
   {
     id: 'bottom_bun',
     name: 'Pan Brioche Base',

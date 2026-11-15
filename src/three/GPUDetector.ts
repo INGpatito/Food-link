@@ -41,7 +41,7 @@ export function detectGPUCapabilities(): HardwareInfo {
             tier = 'raytracing';
         } else if (
             /uhd|hd graphics|swiftshader|llvmpipe|softpipe|microsoft basic/i.test(nameLower) ||
-            (typeof navigator !== 'undefined' && navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)
+            (typeof navigator !== 'undefined' && navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) // Low-end CPUs often have integrated GPUs 
         ) { 
             isLowEnd = true;
             tier = 'performance';

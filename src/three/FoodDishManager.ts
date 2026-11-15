@@ -616,3 +616,4 @@ export class FoodDishManager {
         this.normalizedWeights = [dw0 / sumWeight, dw1 / sumWeight, dw2 / sumWeight, dw3 / sumWeight];
     }
 }
+
