@@ -105,6 +105,8 @@ export const PLACES_SCHEMA = [
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_email VARCHAR(190) NOT NULL,
     pickup_alias VARCHAR(140) DEFAULT NULL,
+    role VARCHAR(50) NOT NULL DEFAULT 'comensal',
+    zone_note VARCHAR(255) DEFAULT NULL,
     dietary_tags VARCHAR(500) DEFAULT NULL,
     notify_favorites TINYINT(1) NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -119,7 +121,10 @@ const SCHEMA_ALTERS = [
   "ALTER TABLE businesses ADD COLUMN rating_count INT NOT NULL DEFAULT 1",
   "ALTER TABLE offers ADD COLUMN est_weight_kg DECIMAL(6,2) NOT NULL DEFAULT 0.65",
   "ALTER TABLE users ADD COLUMN pickup_alias VARCHAR(140) DEFAULT NULL",
-  "ALTER TABLE users ADD COLUMN dietary_tags VARCHAR(500) DEFAULT NULL"
+  "ALTER TABLE users ADD COLUMN dietary_tags VARCHAR(500) DEFAULT NULL",
+  "ALTER TABLE user_preferences ADD COLUMN role VARCHAR(50) DEFAULT 'comensal'",
+  "ALTER TABLE user_preferences ADD COLUMN zone_note VARCHAR(255) DEFAULT NULL",
+  "ALTER TABLE orders ADD COLUMN has_review TINYINT(1) NOT NULL DEFAULT 0"
 ];
 
 export const DEMO_PLACES = [
@@ -555,7 +560,7 @@ const memoryStore = {
   orders: [],
   favoritesByEmail: new Map(), // email -> Set<number>
   reviewsByBusiness: new Map(), // businessId -> Review[]
-  preferencesByEmail: new Map() // email -> { pickup_alias, dietary_tags, notify_favorites }
+  preferencesByEmail: new Map() // email -> { pickup_alias, role, zone_note, dietary_tags, notify_favorites }
 };
 
 function ensureMemorySeeded(centerLat, centerLng) {
@@ -742,7 +747,7 @@ async function handleNearby(url, pool, dbReady) {
       .map((p) => ({ id: p.id, name: p.name, offers_count: p.activeOffers.length, distance_m: p.distance_m }));
 
     const places = allWithOffers
-      .filter((p) => p.distance_m <= radius)
+      .filter((p) => p.distance_m <= radius || (email && p.is_favorite))
       .filter((p) => (category === 'all' ? true : p.type === category))
       .filter((p) => (favoritesOnly ? p.is_favorite : true))
       .map((p) => ({
@@ -781,7 +786,7 @@ async function handleNearby(url, pool, dbReady) {
     ? `AND EXISTS (SELECT 1 FROM offers o WHERE o.business_id = b.id AND ${offerCondition})`
     : '';
 
-  const [rows] = await pool.query(
+  const [nearbyRows] = await pool.query(
     `SELECT b.*, ${haversineSql()} AS distance_m
      FROM businesses b
      WHERE b.lat BETWEEN ? AND ? AND b.lng BETWEEN ? AND ?
@@ -792,27 +797,50 @@ async function handleNearby(url, pool, dbReady) {
     [lat, lat, lng, lat - dLat, lat + dLat, lng - dLng, lng + dLng, radius]
   );
 
-  const bizIds = rows.map((r) => r.id);
+  let allRows = [...nearbyRows];
+  if (email && favSet.size > 0) {
+    const nearbyIds = new Set(nearbyRows.map((r) => Number(r.id)));
+    const missingFavIds = Array.from(favSet).filter((id) => !nearbyIds.has(id));
+    if (missingFavIds.length > 0) {
+      const [favRows] = await pool.query(
+        `SELECT b.*, ${haversineSql()} AS distance_m
+         FROM businesses b
+         WHERE b.id IN (?)`,
+        [lat, lat, lng, missingFavIds]
+      );
+      allRows.push(...favRows);
+    }
+  }
+
+  const bizIds = allRows.map((r) => r.id);
   const [offersByBusiness, reviewsByBusiness] = await Promise.all([
     loadActiveOffers(pool, bizIds),
     loadReviewsByBusiness(pool, bizIds)
   ]);
 
-  const allPlaces = rows.map((row) => {
-    const offers = (offersByBusiness.get(row.id) || []).filter(filterOfferFn);
+  const allPlaces = allRows.map((row) => {
+    const rawOffers = offersByBusiness.get(Number(row.id)) || [];
+    const offers = rawOffers.filter(filterOfferFn);
     const place = serializePlace(row, offers, favSet.has(Number(row.id)));
     place.reviews = reviewsByBusiness.get(Number(row.id)) || [];
+    place.rawActiveOffers = rawOffers.filter((o) => o.status === 'active' && o.quantity_left > 0);
     return place;
   });
 
   const activeFavoriteAlerts = allPlaces
-    .filter((p) => p.is_favorite && p.offers.length > 0)
-    .map((p) => ({ id: p.id, name: p.name, offers_count: p.offers.length, distance_m: p.distance_m }));
+    .filter((p) => p.is_favorite && (p.rawActiveOffers?.length || 0) > 0)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      offers_count: p.rawActiveOffers.length,
+      distance_m: p.distance_m
+    }));
 
   const places = allPlaces
     .filter((p) => (category === 'all' ? true : p.type === category))
     .filter((p) => (favoritesOnly ? p.is_favorite : true))
-    .filter((p) => (withoutOffers && filter === 'all' ? true : p.offers.length > 0));
+    .filter((p) => (withoutOffers && filter === 'all' ? true : p.offers.length > 0))
+    .sort((a, b) => (a.distance_m ?? 0) - (b.distance_m ?? 0));
 
   return [200, {
     success: true,
@@ -1284,26 +1312,36 @@ async function handleBusinessPanel(url, pool, dbReady) {
 
   if (!dbReady) {
     ensureMemorySeeded(lat, lng);
-    const available = memoryStore.places.map((p) => ({
+    const ownedPlaces = memoryStore.places.filter(
+      (p) => p.owner_email && String(p.owner_email).trim().toLowerCase() === email
+    );
+
+    if (ownedPlaces.length === 0) {
+      return [200, {
+        success: true,
+        business: null,
+        available_businesses: [],
+        offers: [],
+        orders: { pending: [], history: [] },
+        stats: null
+      }];
+    }
+
+    const available = ownedPlaces.map((p) => ({
       id: p.id,
       name: p.name,
       type: p.type,
-      is_owner: p.owner_email === email
+      is_owner: true
     }));
 
-    let selected =
-      (requestedId ? memoryStore.places.find((p) => p.id === requestedId) : null) ||
-      memoryStore.places.find((p) => p.owner_email === email) ||
-      memoryStore.places[0] ||
-      null;
+    const selected =
+      (requestedId ? ownedPlaces.find((p) => p.id === requestedId) : null) ||
+      ownedPlaces[0];
 
-    if (!selected) {
-      return [200, { success: true, business: null, available_businesses: [], offers: [], orders: [], stats: null }];
-    }
-
-    const orders = memoryStore.orders.filter((o) => o.business_id === selected.id);
-    const completed = orders.filter((o) => o.status === 'picked_up');
-    const pending = orders.filter((o) => o.status === 'reserved');
+    const allOrders = memoryStore.orders.filter((o) => o.business_id === selected.id);
+    const pending = allOrders.filter((o) => o.status === 'reserved');
+    const history = allOrders.filter((o) => o.status === 'picked_up' || o.status === 'cancelled');
+    const completed = allOrders.filter((o) => o.status === 'picked_up');
     const kgRescued = Number(completed.reduce((acc, o) => acc + Number(o.est_weight_kg || 0.65), 0).toFixed(2));
     const revenue = Math.round(completed.reduce((acc, o) => acc + Number(o.total_price || 0), 0));
 
@@ -1312,7 +1350,10 @@ async function handleBusinessPanel(url, pool, dbReady) {
       business: selected,
       available_businesses: available,
       offers: selected.offers,
-      orders,
+      orders: {
+        pending,
+        history
+      },
       stats: {
         active_offers: selected.offers.filter((o) => o.status === 'active' && o.quantity_left > 0).length,
         pending_orders: pending.length,
@@ -1328,27 +1369,32 @@ async function handleBusinessPanel(url, pool, dbReady) {
 
   await ensureDemoDataNear(pool, lat, lng);
 
-  const [allBiz] = await pool.query(
-    'SELECT id, name, type, owner_email, description, address, phone, lat, lng, opening_hours, rating_avg, rating_count, is_verified FROM businesses ORDER BY (owner_email = ?) DESC, id ASC LIMIT 30',
+  const [ownedBiz] = await pool.query(
+    'SELECT id, name, type, owner_email, description, address, phone, lat, lng, opening_hours, rating_avg, rating_count, is_verified FROM businesses WHERE LOWER(TRIM(owner_email)) = ? ORDER BY id ASC LIMIT 30',
     [email]
   );
 
-  const available = allBiz.map((b) => ({
+  if (ownedBiz.length === 0) {
+    return [200, {
+      success: true,
+      business: null,
+      available_businesses: [],
+      offers: [],
+      orders: { pending: [], history: [] },
+      stats: null
+    }];
+  }
+
+  const available = ownedBiz.map((b) => ({
     id: Number(b.id),
     name: b.name,
     type: b.type,
-    is_owner: Boolean(b.owner_email && String(b.owner_email).toLowerCase() === email)
+    is_owner: true
   }));
 
   const targetRow =
-    (requestedId ? allBiz.find((b) => Number(b.id) === requestedId) : null) ||
-    allBiz.find((b) => b.owner_email && String(b.owner_email).toLowerCase() === email) ||
-    allBiz[0] ||
-    null;
-
-  if (!targetRow) {
-    return [200, { success: true, business: null, available_businesses: [], offers: [], orders: [], stats: null }];
-  }
+    (requestedId ? ownedBiz.find((b) => Number(b.id) === requestedId) : null) ||
+    ownedBiz[0];
 
   const bizId = Number(targetRow.id);
   const [[offerRows], [orderRows]] = await Promise.all([
@@ -1373,6 +1419,9 @@ async function handleBusinessPanel(url, pool, dbReady) {
     offer_id: Number(r.offer_id),
     offer_title: r.offer_title,
     offer_kind: r.offer_kind,
+    pickup_start: r.pickup_start instanceof Date ? r.pickup_start.toISOString() : (r.pickup_start ? String(r.pickup_start) : null),
+    pickup_end: r.pickup_end instanceof Date ? r.pickup_end.toISOString() : (r.pickup_end ? String(r.pickup_end) : null),
+    has_review: Boolean(r.has_review),
     quantity: Number(r.quantity),
     unit_price: Number(r.unit_price),
     total_price: Number(r.total_price),
@@ -1383,8 +1432,9 @@ async function handleBusinessPanel(url, pool, dbReady) {
     picked_up_at: r.picked_up_at instanceof Date ? r.picked_up_at.toISOString() : r.picked_up_at || null
   }));
 
-  const completed = orders.filter((o) => o.status === 'picked_up');
   const pending = orders.filter((o) => o.status === 'reserved');
+  const history = orders.filter((o) => o.status === 'picked_up' || o.status === 'cancelled');
+  const completed = orders.filter((o) => o.status === 'picked_up');
   const kgRescued = Number(completed.reduce((acc, o) => acc + Number(o.est_weight_kg || 0.65), 0).toFixed(2));
   const revenue = Math.round(completed.reduce((acc, o) => acc + Number(o.total_price || 0), 0));
 
@@ -1393,7 +1443,10 @@ async function handleBusinessPanel(url, pool, dbReady) {
     business: serializePlace(targetRow, offers, false),
     available_businesses: available,
     offers,
-    orders,
+    orders: {
+      pending,
+      history
+    },
     stats: {
       active_offers: offers.filter((o) => o.status === 'active' && o.quantity_left > 0).length,
       pending_orders: pending.length,
@@ -1408,7 +1461,7 @@ async function handleBusinessPanel(url, pool, dbReady) {
 }
 
 async function handleSaveBusiness(body, pool, dbReady) {
-  const email = String(body.email || 'invitado@foodlink.local').trim().toLowerCase();
+  const email = String(body.owner_email || body.email || 'invitado@foodlink.local').trim().toLowerCase();
   const name = String(body.name || '').trim();
   const type = String(body.type || 'fonda').trim();
   const description = String(body.description || '').trim() || null;
@@ -1478,22 +1531,29 @@ async function handleSaveBusiness(body, pool, dbReady) {
 
 async function handleCreateOffer(body, pool, dbReady) {
   const businessId = Number(body.businessId);
+  const callerEmail = String(body.email || '').trim().toLowerCase();
   const title = String(body.title || '').trim();
   const description = String(body.description || '').trim() || null;
   const kind = body.kind === 'paquete_sorpresa' ? 'paquete_sorpresa' : 'producto';
-  const originalPrice = Math.max(0, Number(body.original_price || 0));
-  const price = Math.max(0, Number(body.price || 0));
-  const quantityTotal = clamp(Math.floor(Number(body.quantity_total || 3)), 1, 200);
-  const pickupHours = clamp(Number(body.pickup_hours || 3), 0.5, 24);
-  const estWeightKg = clamp(Number(body.est_weight_kg || 0.65), 0.1, 25);
+  const originalPrice = Math.max(0, Number(body.original_price ?? body.originalPrice ?? 0));
+  const price = Math.max(0, Number(body.price ?? 0));
+  const quantityTotal = clamp(Math.floor(Number(body.quantity_total ?? body.quantity ?? 3)), 1, 200);
+  const pickupHours = clamp(Number(body.pickup_hours ?? body.pickupHours ?? 3), 0.5, 24);
+  const estWeightKg = clamp(Number(body.est_weight_kg ?? body.estWeightKg ?? 0.65), 0.1, 25);
   const tags = String(body.tags || '').trim() || null;
   const allergens = String(body.allergens || '').trim() || null;
 
   if (!Number.isFinite(businessId) || businessId <= 0) {
     return [400, { success: false, message: 'Selecciona el negocio donde se publicará la oferta.' }];
   }
+  if (!callerEmail) {
+    return [403, { success: false, message: 'Se requiere el correo del propietario para publicar una oferta.' }];
+  }
   if (!title || title.length < 3) {
     return [400, { success: false, message: 'Escribe el título de la oferta o paquete.' }];
+  }
+  if (price > originalPrice) {
+    return [400, { success: false, message: 'El precio de rescate no puede ser mayor al precio original.' }];
   }
 
   const now = Date.now();
@@ -1503,6 +1563,9 @@ async function handleCreateOffer(body, pool, dbReady) {
   if (!dbReady) {
     const place = memoryStore.places.find((p) => p.id === businessId);
     if (!place) return [404, { success: false, message: 'Negocio no encontrado.' }];
+    if (!place.owner_email || String(place.owner_email).trim().toLowerCase() !== callerEmail) {
+      return [403, { success: false, message: 'No tienes autorización para publicar ofertas en este negocio.' }];
+    }
 
     const offer = {
       id: memoryStore.nextOfferId++,
@@ -1523,6 +1586,18 @@ async function handleCreateOffer(body, pool, dbReady) {
     };
     place.offers.unshift(offer);
     return [201, { success: true, message: 'Oferta publicada y activa en el mapa.', offer }];
+  }
+
+  const [bizRows] = await pool.query(
+    'SELECT id, owner_email FROM businesses WHERE id = ? LIMIT 1',
+    [businessId]
+  );
+  if (bizRows.length === 0) {
+    return [404, { success: false, message: 'Negocio no encontrado.' }];
+  }
+  const bizOwner = String(bizRows[0].owner_email || '').trim().toLowerCase();
+  if (!bizOwner || bizOwner !== callerEmail) {
+    return [403, { success: false, message: 'No tienes autorización para publicar ofertas en este negocio.' }];
   }
 
   const [ins] = await pool.query(
@@ -1569,24 +1644,93 @@ async function handleCreateOffer(body, pool, dbReady) {
   }];
 }
 
-async function handleCloseOffer(offerId, pool, dbReady) {
+async function handleCloseOffer(offerId, bodyOrPool, urlOrDbReady, poolArg, dbReadyArg) {
+  let body = null;
+  let url = null;
+  let pool = null;
+  let dbReady = false;
+
+  if (bodyOrPool && typeof bodyOrPool === 'object' && ('query' in bodyOrPool || 'getConnection' in bodyOrPool)) {
+    pool = bodyOrPool;
+    dbReady = Boolean(urlOrDbReady);
+  } else {
+    body = bodyOrPool;
+    url = urlOrDbReady;
+    pool = poolArg;
+    dbReady = Boolean(dbReadyArg);
+  }
+
+  const callerEmail = String(body?.email || (url && url.searchParams ? url.searchParams.get('email') : '') || '').trim().toLowerCase();
+
+  if (!Number.isFinite(offerId) || offerId <= 0) {
+    return [400, { success: false, message: 'Identificador de oferta inválido.' }];
+  }
+  if (!callerEmail) {
+    return [403, { success: false, message: 'Se requiere el correo del propietario para cerrar una oferta.' }];
+  }
+
   if (!dbReady) {
+    let targetPlace = null;
+    let targetOffer = null;
     for (const p of memoryStore.places) {
       const off = p.offers.find((o) => o.id === offerId);
       if (off) {
-        off.status = 'cancelled';
-        off.quantity_left = 0;
-        return [200, { success: true, message: 'Oferta cerrada.' }];
+        targetPlace = p;
+        targetOffer = off;
+        break;
       }
     }
+
+    if (!targetOffer) {
+      return [404, { success: false, message: 'Oferta no encontrada.' }];
+    }
+
+    const placeOwner = String(targetPlace.owner_email || '').trim().toLowerCase();
+    if (!placeOwner || placeOwner !== callerEmail) {
+      return [403, { success: false, message: 'No tienes autorización para cerrar ofertas de este negocio.' }];
+    }
+
+    targetOffer.status = 'cancelled';
+    targetOffer.quantity_left = 0;
+    return [200, { success: true, message: 'Oferta cerrada.' }];
+  }
+
+  const [rows] = await pool.query(
+    `SELECT o.id, o.business_id, b.owner_email
+     FROM offers o
+     JOIN businesses b ON b.id = o.business_id
+     WHERE o.id = ?
+     LIMIT 1`,
+    [offerId]
+  );
+
+  if (rows.length === 0) {
     return [404, { success: false, message: 'Oferta no encontrada.' }];
   }
 
-  await pool.query("UPDATE offers SET status = 'cancelled', quantity_left = 0 WHERE id = ?", [offerId]);
+  const bizOwner = String(rows[0].owner_email || '').trim().toLowerCase();
+  if (!bizOwner || bizOwner !== callerEmail) {
+    return [403, { success: false, message: 'No tienes autorización para cerrar ofertas de este negocio.' }];
+  }
+
+  const [updateResult] = await pool.query(
+    "UPDATE offers SET status = 'cancelled', quantity_left = 0 WHERE id = ?",
+    [offerId]
+  );
+
+  if (updateResult.affectedRows === 0) {
+    return [404, { success: false, message: 'Oferta no encontrada o no se pudo actualizar.' }];
+  }
+
   return [200, { success: true, message: 'Oferta finalizada.' }];
 }
 
 async function handleRedeemOrder(body, pool, dbReady) {
+  const businessId = Number(body.businessId);
+  if (!Number.isFinite(businessId) || businessId <= 0) {
+    return [400, { success: false, message: 'Se requiere el identificador del negocio para validar la entrega.' }];
+  }
+
   let rawCode = String(body.pickup_code || '').trim().toUpperCase();
   if (!rawCode) {
     return [400, { success: false, message: 'Ingresa el código QR o código de recogida (ej. FL-7K4M92).' }];
@@ -1602,6 +1746,9 @@ async function handleRedeemOrder(body, pool, dbReady) {
     const ord = memoryStore.orders.find((o) => o.pickup_code.toUpperCase() === rawCode);
     if (!ord) {
       return [404, { success: false, message: `No se encontró ninguna reserva con el código ${rawCode}.` }];
+    }
+    if (Number(ord.business_id) !== businessId) {
+      return [400, { success: false, message: 'El codigo de recogida pertenece a otro establecimiento y no puede canjearse aqui.' }];
     }
     if (ord.status === 'picked_up') {
       return [400, { success: false, message: `El código ${rawCode} ya fue canjeado anteriormente.` }];
@@ -1631,6 +1778,9 @@ async function handleRedeemOrder(body, pool, dbReady) {
   }
 
   const ord = rows[0];
+  if (Number(ord.business_id) !== businessId) {
+    return [400, { success: false, message: 'El codigo de recogida pertenece a otro establecimiento y no puede canjearse aqui.' }];
+  }
   if (ord.status === 'picked_up') {
     return [400, { success: false, message: `El código ${rawCode} ya fue entregado anteriormente.` }];
   }
@@ -1648,6 +1798,7 @@ async function handleRedeemOrder(body, pool, dbReady) {
     message: `Entrega validada: ${ord.quantity}x ${ord.offer_title} para ${ord.user_name}.`,
     order: {
       id: Number(ord.id),
+      business_id: Number(ord.business_id),
       pickup_code: ord.pickup_code,
       user_name: ord.user_name,
       offer_title: ord.offer_title,
@@ -1663,11 +1814,13 @@ async function handleRedeemOrder(body, pool, dbReady) {
 /* ------------------------------------------------------------------ */
 
 async function handleGetProfile(url, pool, dbReady) {
-  const userEmail = (url.searchParams.get('user_email') || 'invitado@foodlink.local').trim().toLowerCase();
+  const userEmail = (url.searchParams.get('user_email') || url.searchParams.get('email') || 'invitado@foodlink.local').trim().toLowerCase();
 
   if (!dbReady) {
     const saved = memoryStore.preferencesByEmail.get(userEmail) || {
       pickup_alias: null,
+      role: 'comensal',
+      zone_note: null,
       dietary_tags: ['Sin restricciones', 'Comida corrida casera'],
       notify_favorites: true
     };
@@ -1675,19 +1828,23 @@ async function handleGetProfile(url, pool, dbReady) {
   }
 
   const [prefRows] = await pool.query(
-    'SELECT pickup_alias, dietary_tags, notify_favorites FROM user_preferences WHERE user_email = ? LIMIT 1',
+    'SELECT pickup_alias, role, zone_note, dietary_tags, notify_favorites FROM user_preferences WHERE user_email = ? LIMIT 1',
     [userEmail]
   );
 
   if (prefRows.length > 0) {
     const row = prefRows[0];
-    const tags = row.dietary_tags
-      ? String(row.dietary_tags).split(',').map((t) => t.trim()).filter(Boolean)
-      : ['Sin restricciones', 'Comida corrida casera'];
+    let tags = ['Sin restricciones', 'Comida corrida casera'];
+    if (row.dietary_tags !== null && row.dietary_tags !== undefined) {
+      const trimmed = String(row.dietary_tags).trim();
+      tags = trimmed.length === 0 ? [] : trimmed.split(',').map((t) => t.trim()).filter(Boolean);
+    }
     return [200, {
       success: true,
       profile: {
         pickup_alias: row.pickup_alias || null,
+        role: row.role || 'comensal',
+        zone_note: row.zone_note || null,
         dietary_tags: tags,
         notify_favorites: Boolean(row.notify_favorites)
       }
@@ -1698,6 +1855,8 @@ async function handleGetProfile(url, pool, dbReady) {
     success: true,
     profile: {
       pickup_alias: null,
+      role: 'comensal',
+      zone_note: null,
       dietary_tags: ['Sin restricciones', 'Comida corrida casera'],
       notify_favorites: true
     }
@@ -1705,21 +1864,29 @@ async function handleGetProfile(url, pool, dbReady) {
 }
 
 async function handleSaveProfile(body, pool, dbReady) {
-  const userEmail = String(body.user_email || 'invitado@foodlink.local').trim().toLowerCase();
-  const pickupAlias = String(body.pickup_alias || body.name || '').trim() || null;
+  const userEmail = String(body.user_email || body.email || 'invitado@foodlink.local').trim().toLowerCase();
+  const pickupAlias = body.pickup_alias !== undefined ? (String(body.pickup_alias || '').trim() || null) : null;
+  const role = body.role ? String(body.role).trim() : 'comensal';
+  const zoneNote = body.zone_note !== undefined ? (String(body.zone_note || '').trim() || null) : null;
   const rawTags = Array.isArray(body.dietary_tags)
     ? body.dietary_tags.map((t) => String(t).trim()).filter(Boolean)
-    : String(body.dietary_tags || '').split(',').map((t) => t.trim()).filter(Boolean);
+    : (body.dietary_tags !== undefined && body.dietary_tags !== null
+        ? String(body.dietary_tags).split(',').map((t) => t.trim()).filter(Boolean)
+        : ['Sin restricciones', 'Comida corrida casera']);
   const tagsCsv = rawTags.join(', ');
   const notifyFavorites = body.notify_favorites === undefined ? 1 : body.notify_favorites ? 1 : 0;
+  const explicitName = typeof body.name === 'string' && body.name.trim().length > 0 ? body.name.trim() : null;
 
   if (!dbReady) {
     const pref = {
       pickup_alias: pickupAlias,
+      role: role || 'comensal',
+      zone_note: zoneNote,
       dietary_tags: rawTags,
       notify_favorites: Boolean(notifyFavorites)
     };
     memoryStore.preferencesByEmail.set(userEmail, pref);
+
     return [200, {
       success: true,
       message: 'Preferencias guardadas.',
@@ -1728,27 +1895,34 @@ async function handleSaveProfile(body, pool, dbReady) {
   }
 
   await pool.query(
-    `INSERT INTO user_preferences (user_email, pickup_alias, dietary_tags, notify_favorites)
-     VALUES (?, ?, ?, ?)
+    `INSERT INTO user_preferences (user_email, pickup_alias, role, zone_note, dietary_tags, notify_favorites)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE
        pickup_alias = VALUES(pickup_alias),
+       role = VALUES(role),
+       zone_note = VALUES(zone_note),
        dietary_tags = VALUES(dietary_tags),
        notify_favorites = VALUES(notify_favorites)`,
-    [userEmail, pickupAlias, tagsCsv || null, notifyFavorites]
+    [userEmail, pickupAlias, role, zoneNote, tagsCsv, notifyFavorites]
   );
 
-  if (pickupAlias) {
-    await pool.query(
-      'UPDATE users SET name = ?, pickup_alias = ?, dietary_tags = ? WHERE email = ?',
-      [pickupAlias, pickupAlias, tagsCsv || null, userEmail]
-    );
+  // CRITICAL: Do NOT update users.name with pickup_alias! Only update users.name if body.name is explicitly provided and non-empty.
+  if (explicitName) {
+    await pool.query('UPDATE users SET name = ? WHERE email = ?', [explicitName, userEmail]).catch(() => {});
   }
+  // Keep users.pickup_alias and users.dietary_tags updated without touching users.name
+  await pool.query(
+    'UPDATE users SET pickup_alias = ?, dietary_tags = ? WHERE email = ?',
+    [pickupAlias, tagsCsv, userEmail]
+  ).catch(() => {});
 
   return [200, {
     success: true,
     message: 'Preferencias guardadas en la base de datos FOODLINK.',
     profile: {
       pickup_alias: pickupAlias,
+      role: role || 'comensal',
+      zone_note: zoneNote,
       dietary_tags: rawTags,
       notify_favorites: Boolean(notifyFavorites)
     }
@@ -1850,7 +2024,8 @@ export async function handlePlacesRequest(req, res, url, pool, sendJson) {
 
     const closeOfferMatch = pathname.match(/^\/api\/places\/business\/offers\/(\d+)\/close$/);
     if (method === 'POST' && closeOfferMatch) {
-      const [status, payload] = await handleCloseOffer(Number(closeOfferMatch[1]), pool, dbReady);
+      const body = await parseBody(req).catch(() => ({}));
+      const [status, payload] = await handleCloseOffer(Number(closeOfferMatch[1]), body, url, pool, dbReady);
       sendJson(res, status, payload);
       return true;
     }

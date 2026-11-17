@@ -55,6 +55,23 @@ function sendJson(res, statusCode, data) {
   res.end(JSON.stringify(data));
 }
 
+/* ------------------------------------------------------------------ */
+/* In-memory user / auth store fallback                               */
+/* ------------------------------------------------------------------ */
+
+const memoryUsersByEmail = new Map();
+const memoryUsersById = new Map();
+let memoryUserIdCounter = 1000;
+
+function isDbDisabled() {
+  return process.env.FOODLINK_DISABLE_PLACES_DB === '1';
+}
+
+function syncUserToMemory(user) {
+  memoryUsersByEmail.set(user.email.toLowerCase(), { ...user });
+  memoryUsersById.set(user.id, { ...user });
+}
+
 const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
@@ -93,8 +110,20 @@ const server = http.createServer(async (req, res) => {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
-      const [existing] = await pool.query('SELECT id, is_verified FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
-      if (existing.length > 0 && Boolean(existing[0].is_verified)) {
+      let existing = null;
+      if (isDbDisabled()) {
+        existing = memoryUsersByEmail.get(normalizedEmail) || null;
+      } else {
+        try {
+          const [existingRows] = await pool.query('SELECT id, is_verified FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
+          if (existingRows.length > 0) existing = existingRows[0];
+          else existing = memoryUsersByEmail.get(normalizedEmail) || null;
+        } catch {
+          existing = memoryUsersByEmail.get(normalizedEmail) || null;
+        }
+      }
+
+      if (existing && Boolean(existing.is_verified)) {
         return sendJson(res, 409, { success: false, message: 'Este correo electronico ya se encuentra registrado.' });
       }
 
@@ -102,18 +131,46 @@ const server = http.createServer(async (req, res) => {
       const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
       let userId;
 
-      if (existing.length > 0) {
-        userId = existing[0].id;
-        await pool.query(
-          'UPDATE users SET name = ?, password_hash = ?, is_verified = 0, verification_token = ? WHERE id = ?',
-          [name.trim(), passwordHash, verificationCode, userId]
-        );
+      if (existing) {
+        userId = existing.id;
+        const updatedUser = {
+          id: userId,
+          name: name.trim(),
+          email: normalizedEmail,
+          password_hash: passwordHash,
+          is_verified: 0,
+          verification_token: verificationCode
+        };
+        syncUserToMemory(updatedUser);
+        if (!isDbDisabled()) {
+          try {
+            await pool.query(
+              'UPDATE users SET name = ?, password_hash = ?, is_verified = 0, verification_token = ? WHERE id = ?',
+              [name.trim(), passwordHash, verificationCode, userId]
+            );
+          } catch {}
+        }
       } else {
-        const [result] = await pool.query(
-          'INSERT INTO users (name, email, password_hash, is_verified, verification_token) VALUES (?, ?, ?, 0, ?)',
-          [name.trim(), normalizedEmail, passwordHash, verificationCode]
-        );
-        userId = result.insertId;
+        userId = memoryUserIdCounter++;
+        const newUser = {
+          id: userId,
+          name: name.trim(),
+          email: normalizedEmail,
+          password_hash: passwordHash,
+          is_verified: 0,
+          verification_token: verificationCode
+        };
+        if (!isDbDisabled()) {
+          try {
+            const [result] = await pool.query(
+              'INSERT INTO users (name, email, password_hash, is_verified, verification_token) VALUES (?, ?, ?, 0, ?)',
+              [name.trim(), normalizedEmail, passwordHash, verificationCode]
+            );
+            newUser.id = result.insertId;
+          } catch {}
+        }
+        syncUserToMemory(newUser);
+        userId = newUser.id;
       }
 
       const emailResult = await sendVerificationEmailServer(normalizedEmail, name.trim(), verificationCode);
@@ -142,16 +199,30 @@ const server = http.createServer(async (req, res) => {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
-      const [rows] = await pool.query(
-        'SELECT id, name, email, password_hash, is_verified FROM users WHERE email = ? LIMIT 1',
-        [normalizedEmail]
-      );
+      let user = null;
+      if (isDbDisabled()) {
+        user = memoryUsersByEmail.get(normalizedEmail) || null;
+      } else {
+        try {
+          const [rows] = await pool.query(
+            'SELECT id, name, email, password_hash, is_verified FROM users WHERE email = ? LIMIT 1',
+            [normalizedEmail]
+          );
+          if (rows.length > 0) {
+            user = rows[0];
+            syncUserToMemory(user);
+          } else {
+            user = memoryUsersByEmail.get(normalizedEmail) || null;
+          }
+        } catch {
+          user = memoryUsersByEmail.get(normalizedEmail) || null;
+        }
+      }
 
-      if (rows.length === 0) {
+      if (!user) {
         return sendJson(res, 401, { success: false, message: 'Credenciales invalidas. Verifica tu correo y contrasena.' });
       }
 
-      const user = rows[0];
       const isMatch = await bcrypt.compare(password, user.password_hash);
       if (!isMatch) {
         return sendJson(res, 401, { success: false, message: 'Credenciales invalidas. Verifica tu correo y contrasena.' });
@@ -179,12 +250,27 @@ const server = http.createServer(async (req, res) => {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
-      const [rows] = await pool.query('SELECT id, name, email, is_verified, verification_token FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
-      if (rows.length === 0) {
+      let user = null;
+      if (isDbDisabled()) {
+        user = memoryUsersByEmail.get(normalizedEmail) || null;
+      } else {
+        try {
+          const [rows] = await pool.query('SELECT id, name, email, is_verified, verification_token FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
+          if (rows.length > 0) {
+            user = rows[0];
+            syncUserToMemory(user);
+          } else {
+            user = memoryUsersByEmail.get(normalizedEmail) || null;
+          }
+        } catch {
+          user = memoryUsersByEmail.get(normalizedEmail) || null;
+        }
+      }
+
+      if (!user) {
         return sendJson(res, 404, { success: false, message: 'Usuario no encontrado.' });
       }
 
-      const user = rows[0];
       if (user.is_verified) {
         return sendJson(res, 200, {
           success: true,
@@ -197,7 +283,15 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 400, { success: false, message: 'El codigo de verificacion es incorrecto.' });
       }
 
-      await pool.query('UPDATE users SET is_verified = 1, verification_token = NULL WHERE id = ?', [user.id]);
+      user.is_verified = 1;
+      user.verification_token = null;
+      syncUserToMemory(user);
+
+      if (!isDbDisabled()) {
+        try {
+          await pool.query('UPDATE users SET is_verified = 1, verification_token = NULL WHERE id = ?', [user.id]);
+        } catch {}
+      }
 
       return sendJson(res, 200, {
         success: true,
@@ -216,19 +310,42 @@ const server = http.createServer(async (req, res) => {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
-      const [rows] = await pool.query('SELECT id, name, email, is_verified FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
-      if (rows.length === 0) {
+      let user = null;
+      if (isDbDisabled()) {
+        user = memoryUsersByEmail.get(normalizedEmail) || null;
+      } else {
+        try {
+          const [rows] = await pool.query('SELECT id, name, email, is_verified FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
+          if (rows.length > 0) {
+            user = rows[0];
+            syncUserToMemory(user);
+          } else {
+            user = memoryUsersByEmail.get(normalizedEmail) || null;
+          }
+        } catch {
+          user = memoryUsersByEmail.get(normalizedEmail) || null;
+        }
+      }
+
+      if (!user) {
         return sendJson(res, 404, { success: false, message: 'Usuario no encontrado.' });
       }
 
-      if (rows[0].is_verified) {
+      if (user.is_verified) {
         return sendJson(res, 400, { success: false, message: 'Esta cuenta ya esta verificada.' });
       }
 
       const newCode = String(Math.floor(100000 + Math.random() * 900000));
-      await pool.query('UPDATE users SET verification_token = ? WHERE id = ?', [newCode, rows[0].id]);
+      user.verification_token = newCode;
+      syncUserToMemory(user);
 
-      const emailResult = await sendVerificationEmailServer(rows[0].email || normalizedEmail, rows[0].name || 'Comensal Foodlink', newCode);
+      if (!isDbDisabled()) {
+        try {
+          await pool.query('UPDATE users SET verification_token = ? WHERE id = ?', [newCode, user.id]);
+        } catch {}
+      }
+
+      const emailResult = await sendVerificationEmailServer(user.email || normalizedEmail, user.name || 'Comensal Foodlink', newCode);
 
       return sendJson(res, 200, {
         success: true,
@@ -246,18 +363,34 @@ const server = http.createServer(async (req, res) => {
       }
 
       const normalizedEmail = email.trim().toLowerCase();
-      const [rows] = await pool.query('SELECT id, name, email, is_verified FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
-      if (rows.length === 0) {
+      let user = null;
+      if (isDbDisabled()) {
+        user = memoryUsersByEmail.get(normalizedEmail) || null;
+      } else {
+        try {
+          const [rows] = await pool.query('SELECT id, name, email, is_verified FROM users WHERE email = ? LIMIT 1', [normalizedEmail]);
+          if (rows.length > 0) {
+            user = rows[0];
+            syncUserToMemory(user);
+          } else {
+            user = memoryUsersByEmail.get(normalizedEmail) || null;
+          }
+        } catch {
+          user = memoryUsersByEmail.get(normalizedEmail) || null;
+        }
+      }
+
+      if (!user) {
         return sendJson(res, 404, { success: false, message: 'Usuario no encontrado.' });
       }
 
       return sendJson(res, 200, {
         success: true,
         user: {
-          id: rows[0].id,
-          name: rows[0].name,
-          email: rows[0].email,
-          is_verified: Boolean(rows[0].is_verified)
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          is_verified: Boolean(user.is_verified)
         }
       });
     }

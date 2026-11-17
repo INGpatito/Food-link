@@ -278,7 +278,7 @@ export function authPlugin(): Plugin {
           console.error('[Auth Error]:', error);
           return sendJson(res, 500, {
             success: false,
-            message: 'Error en el servidor de base de datos Orange Pi: ' + (error?.message || 'Error desconocido')
+            message: 'Error en el servicio de autenticacion: ' + (error?.message || 'Error desconocido')
           });
         }
       });

@@ -4,9 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <meta name="theme-color" content="#0a0c0b">
-    <meta name="description" content="Mi Perfil en Foodlink: gestiona tus pedidos con código QR, consulta tu impacto ecológico, locales favoritos y el panel de tu negocio.">
+    <meta name="description" content="Mi Perfil en Foodlink: gestiona tus pedidos con codigo QR, consulta tu impacto ecologico, locales favoritos y el panel de tu negocio.">
     <title>Mi Perfil | FOODLINK</title>
+    <script>
+        if (!localStorage.getItem('foodlink_user')) {
+            window.location.replace('/?login=1');
+        }
+    </script>
     <link rel="stylesheet" href="/src/styles/perfil.css">
+    <style>
+        @media (max-width: 960px) {
+            .pf-layout {
+                display: flex;
+                flex-direction: column;
+            }
+            .pf-sidebar {
+                display: contents;
+            }
+            .pf-nav {
+                order: 1;
+                position: sticky;
+                top: 66px;
+                z-index: 50;
+            }
+            .pf-main {
+                order: 2;
+            }
+            .pf-user-card {
+                order: 3;
+            }
+            .pf-user-card.is-tab-hidden-mobile {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body class="pf-body">
     <div class="pf-app" id="pf-app">
@@ -33,8 +64,8 @@
 
         <!-- Contenedor principal -->
         <div class="pf-layout">
-            <!-- Columna izquierda: Resumen de usuario y navegacion de pestañas -->
-            <aside class="pf-sidebar" aria-label="Menú de perfil">
+            <!-- Columna izquierda: Resumen de usuario y navegacion de pestanas -->
+            <aside class="pf-sidebar" aria-label="Menu de perfil">
                 <div class="pf-user-card" id="pf-user-card"></div>
                 <nav class="pf-nav" id="pf-nav" aria-label="Secciones de tu perfil"></nav>
             </aside>

@@ -18,7 +18,7 @@ import {
     fetchNearby, fetchPlace, geocode, placeStatus, discountPercent,
     createOrder, fetchOrdersAndImpact, cancelOrder, toggleFavorite,
     submitReview, fetchBusinessPanel, registerBusiness, publishBusinessOffer,
-    closeBusinessOffer, redeemOrderCode,
+    closeBusinessOffer, redeemOrderCode, splitBusinessPanelOrders,
     PLACE_TYPE_LABEL,
     type Place, type PlaceType, type Offer, type OfferFilter, type PlaceCategoryFilter,
     type GeocodeResult, type FavoriteAlert, type Order, type ImpactSummary,
@@ -190,6 +190,7 @@ interface AppState {
     radius: number;
     filter: OfferFilter;
     category: PlaceCategoryFilter;
+    favoritesOnly: boolean;
     places: Place[];
     favoriteIds: Set<number>;
     favoriteAlerts: FavoriteAlert[];
@@ -267,6 +268,7 @@ const state: AppState = {
     radius: 3000,
     filter: 'all',
     category: 'all',
+    favoritesOnly: false,
     places: [],
     favoriteIds: new Set<number>(),
     favoriteAlerts: [],
@@ -296,6 +298,9 @@ const state: AppState = {
     arrived: false,
     serverOffsetMs: 0
 };
+
+let fitFavoritesPending = false;
+let initialPlacesRequested = false;
 
 const $ = <T extends HTMLElement>(id: string): T => {
     const el = document.getElementById(id);
@@ -391,14 +396,20 @@ function init(): void {
     bindUi();
     setSheet(MOBILE_QUERY.matches ? 'half' : 'full');
 
-    const initialTab = new URLSearchParams(location.search).get('tab');
+    const params = new URLSearchParams(location.search);
+    const initialTab = params.get('tab');
     if (initialTab && ['favoritos', 'pedidos', 'impacto', 'negocio', 'cuenta'].includes(initialTab)) {
         location.replace(`/perfil/?tab=${encodeURIComponent(initialTab)}`);
         return;
     }
+    if (params.get('filtro') === 'favoritos') {
+        state.favoritesOnly = true;
+        fitFavoritesPending = true;
+    }
 
     renderTabs();
     renderPanel();
+    if (state.favoritesOnly) void loadPlaces();
     activateGps(true);
     void refreshUserOrdersQuietly();
 
@@ -696,7 +707,7 @@ function activateGps(initial: boolean): void {
     if (!('geolocation' in navigator)) {
         state.locationError = 'Tu dispositivo o navegador no cuenta con servicio de GPS. Puedes mover el pin azul "TU PUNTO" en el mapa o buscar tu colonia arriba.';
         syncLocationMarker();
-        if (initial) void loadPlaces();
+        if (initial && !initialPlacesRequested) void loadPlaces();
         renderPanel();
         return;
     }
@@ -733,7 +744,7 @@ function activateGps(initial: boolean): void {
         syncRadiusCircle();
         startPassiveLocationWatch();
 
-        if (state.view === 'list') {
+        if (state.view === 'list' && !state.favoritesOnly) {
             focusOn(p, 15.5);
         } else if (state.view === 'route') {
             void showRoute();
@@ -766,7 +777,7 @@ function activateGps(initial: boolean): void {
         syncLocationMarker();
 
         if (!initial) toast('No se pudo obtener el GPS. Puedes arrastrar el pin azul "TU PUNTO" en el mapa.', 4500);
-        if (initial) void loadPlaces();
+        if (initial && !initialPlacesRequested) void loadPlaces();
         else renderPanel();
     };
 
@@ -976,6 +987,7 @@ function readStoredStyle(): MapStyleId {
 /* ------------------------------------------------------------------ */
 
 async function loadPlaces(): Promise<void> {
+    initialPlacesRequested = true;
     placesAbort?.abort();
     placesAbort = new AbortController();
     state.loading = true;
@@ -988,7 +1000,12 @@ async function loadPlaces(): Promise<void> {
             state.center,
             state.radius,
             state.filter,
-            { category: state.category, email: identity.email },
+            {
+                category: state.category,
+                favoritesOnly: state.favoritesOnly,
+                withoutOffers: state.favoritesOnly,
+                email: identity.email
+            },
             placesAbort.signal
         );
         state.places = data.places;
@@ -1003,6 +1020,16 @@ async function loadPlaces(): Promise<void> {
         renderPanel();
         updateSheetSummary();
         await openPlaceFromUrl();
+        if (fitFavoritesPending) {
+            fitFavoritesPending = false;
+            if (state.favoritesOnly && !new URLSearchParams(location.search).has('lugar') && state.places.length > 0) {
+                if (state.places.length === 1) {
+                    focusOn(state.places[0], 15.5);
+                } else {
+                    fitBoundsVisible(L.latLngBounds(state.places.map((p) => [p.lat, p.lng] as [number, number])));
+                }
+            }
+        }
     } catch (error) {
         if ((error as Error).name === 'AbortError') return;
         state.loading = false;
@@ -1019,7 +1046,12 @@ async function refreshPlacesQuietly(): Promise<void> {
             state.center,
             state.radius,
             state.filter,
-            { category: state.category, email: identity.email }
+            {
+                category: state.category,
+                favoritesOnly: state.favoritesOnly,
+                withoutOffers: state.favoritesOnly,
+                email: identity.email
+            }
         );
         state.places = data.places;
         if (data.favorite_ids) {
@@ -1138,6 +1170,11 @@ function sortedPlaces(list: Place[] = state.places): Place[] {
 function markerLabel(place: Place): string {
     const status = placeStatus(place);
     if (status === 'free') return `${icons.gift(13)}<span>Gratis</span>`;
+    if (status === 'none' || place.offers.length === 0) {
+        return state.favoriteIds.has(place.id) || place.is_favorite
+            ? `${icons.heartFilled(12)}<span>Favorito</span>`
+            : '<span>Sin ofertas</span>';
+    }
     const best = Math.max(0, ...place.offers.map((o) => discountPercent(o) ?? 0));
     if (best > 0) return `<span>-${best}%</span>`;
     const cheapest = Math.min(...place.offers.map((o) => o.price));
@@ -1256,6 +1293,13 @@ function updateUrl(id: number | null): void {
     history.replaceState(null, '', url);
 }
 
+function syncFilterUrl(): void {
+    const url = new URL(location.href);
+    if (state.favoritesOnly) url.searchParams.set('filtro', 'favoritos');
+    else url.searchParams.delete('filtro');
+    history.replaceState(null, '', url);
+}
+
 /* ------------------------------------------------------------------ */
 /* Acciones Fase 2: Favoritos, Reservas QR, Reseñas y Negocio          */
 /* ------------------------------------------------------------------ */
@@ -1267,7 +1311,17 @@ async function handleToggleFavorite(businessId: number): Promise<void> {
         state.favoriteIds = new Set(res.favorite_ids);
         const place = getPlace(businessId);
         if (place) place.is_favorite = res.is_favorite;
-        refreshMarkerSelection();
+        if (state.favoritesOnly && !res.is_favorite) {
+            state.places = state.places.filter((p) => p.id !== businessId);
+            if (state.selectedId === businessId) {
+                state.selectedId = null;
+                if (state.view === 'detail' || state.view === 'route') state.view = 'list';
+            }
+            renderMarkers();
+            updateSheetSummary();
+        } else {
+            refreshMarkerSelection();
+        }
         renderTabs();
         renderPanel();
         toast(
@@ -1626,10 +1680,16 @@ function renderListView(): string {
         ['discount', 'Descuento'],
         ['surprise', 'Sorpresa']
     ];
-    const chips = filters.map(([value, label]) => `
+    const chips = [
+        ...filters.map(([value, label]) => `
         <button type="button" class="fx-chip${state.filter === value ? ' is-active' : ''}" data-action="filter" data-filter="${value}" aria-pressed="${state.filter === value}">
             ${label}
-        </button>`).join('');
+        </button>`),
+        `<button type="button" class="fx-chip${state.favoritesOnly ? ' is-active' : ''}" data-action="toggle-favorites-filter" aria-pressed="${state.favoritesOnly}">
+            ${state.favoritesOnly ? icons.heartFilled(12) : icons.heart(12)}
+            <span>Favoritos</span>
+        </button>`
+    ].join('');
 
     const categories: Array<[PlaceCategoryFilter, string]> = [
         ['all', 'Todas'],
@@ -1683,14 +1743,14 @@ function renderListView(): string {
         const nextRadius = RADIUS_OPTIONS.find((r) => r > state.radius);
         content = `
             <div class="fx-empty">
-                ${icons.cloche(30)}
-                <h3>Nada por rescatar con este filtro</h3>
-                <p>Prueba cambiando la categoría o amplía el radio de búsqueda.</p>
+                ${state.favoritesOnly ? icons.heart(30) : icons.cloche(30)}
+                <h3>${state.favoritesOnly ? 'Sin favoritos con este filtro' : 'Nada por rescatar con este filtro'}</h3>
+                <p>${state.favoritesOnly ? 'Guarda negocios como favoritos desde el mapa o quita el filtro para ver locales cercanos.' : 'Prueba cambiando la categoría o amplía el radio de búsqueda.'}</p>
                 <div class="fx-row">
-                    ${state.filter !== 'all' || state.category !== 'all'
+                    ${state.filter !== 'all' || state.category !== 'all' || state.favoritesOnly
                         ? '<button type="button" class="fx-btn fx-btn--primary fx-btn--sm" data-action="reset-filters">Quitar filtros</button>'
                         : ''}
-                    ${nextRadius ? `<button type="button" class="fx-btn fx-btn--ghost fx-btn--sm" data-action="radius" data-radius="${nextRadius}">Ampliar a ${formatDistance(nextRadius)}</button>` : ''}
+                    ${!state.favoritesOnly && nextRadius ? `<button type="button" class="fx-btn fx-btn--ghost fx-btn--sm" data-action="radius" data-radius="${nextRadius}">Ampliar a ${formatDistance(nextRadius)}</button>` : ''}
                 </div>
             </div>`;
     } else {
@@ -1698,6 +1758,10 @@ function renderListView(): string {
     }
 
     const count = !state.loading && !state.error ? `${state.places.length} ${state.places.length === 1 ? 'lugar' : 'lugares'}` : 'Buscando...';
+    const listTitle = state.favoritesOnly ? 'Tus lugares favoritos' : `Cerca de ${escapeHtml(state.centerLabel)}`;
+    const listSubtitle = state.favoritesOnly
+        ? `${count} en tu lista de favoritos`
+        : `${count} a menos de ${formatDistance(state.radius)}`;
     const gpsBadge = state.locating
         ? `<button type="button" class="fx-gps-pill is-locating" data-action="toggle-gps" title="Buscando señal GPS... Toca para cancelar">
                 <span class="fx-spinner" style="width:11px;height:11px;border-width:1.5px"></span>
@@ -1717,11 +1781,11 @@ function renderListView(): string {
     return `
         <div class="fx-list-head">
             <div class="fx-eyebrow-row">
-                <p class="fx-eyebrow">Comida por rescatar</p>
+                <p class="fx-eyebrow">${state.favoritesOnly ? 'Filtro de favoritos' : 'Comida por rescatar'}</p>
                 ${gpsBadge}
             </div>
-            <h1 class="fx-title">Cerca de ${escapeHtml(state.centerLabel)}</h1>
-            <p class="fx-subtitle">${count} a menos de ${formatDistance(state.radius)}</p>
+            <h1 class="fx-title">${listTitle}</h1>
+            <p class="fx-subtitle">${listSubtitle}</p>
             <div class="fx-controls">
                 <div class="fx-chips" role="group" aria-label="Filtrar ofertas">${chips}</div>
                 <label class="fx-radius">
@@ -2148,7 +2212,7 @@ function renderBusinessView(): string {
             <span>${escapeHtml(t.label)}</span>
         </button>`).join('');
 
-    const pendingOrders = (panel?.orders ?? []).filter((o) => o.status === 'reserved');
+    const { pending: pendingOrders } = splitBusinessPanelOrders(panel?.orders);
     const pendingHtml = pendingOrders.length > 0
         ? `<ul class="fx-biz-orders">${pendingOrders.map((o) => `
             <li class="fx-biz-order-row">
@@ -2420,15 +2484,28 @@ function onPanelClick(e: Event): void {
             state.filter = (target.dataset.filter as OfferFilter) || 'all';
             void loadPlaces();
             break;
+        case 'toggle-favorites-filter':
+            state.favoritesOnly = !state.favoritesOnly;
+            fitFavoritesPending = state.favoritesOnly;
+            syncFilterUrl();
+            if (!state.favoritesOnly) fitRadius();
+            void loadPlaces();
+            break;
         case 'category':
             state.category = (target.dataset.category as PlaceCategoryFilter) || 'all';
             void loadPlaces();
             break;
-        case 'reset-filters':
+        case 'reset-filters': {
+            const wasFavorites = state.favoritesOnly;
             state.filter = 'all';
             state.category = 'all';
+            state.favoritesOnly = false;
+            fitFavoritesPending = false;
+            syncFilterUrl();
+            if (wasFavorites) fitRadius();
             void loadPlaces();
             break;
+        }
         case 'go-tab':
             switchTab((target.dataset.tab as 'list' | 'favorites' | 'orders' | 'impact' | 'business') || 'list');
             break;
@@ -2472,13 +2549,25 @@ function onPanelClick(e: Event): void {
         case 'apply-tpl':
             applyOfferTemplate(String(target.dataset.tpl || ''));
             break;
-        case 'close-offer':
-            void closeBusinessOffer(Number(target.dataset.offerId)).then(() => {
-                toast('Oferta cerrada.');
-                void loadBusinessPanelData();
-                void loadPlaces();
-            });
+        case 'close-offer': {
+            const offerId = Number(target.dataset.offerId);
+            if (!offerId) break;
+            const identity = getActiveUserIdentity();
+            target.setAttribute('disabled', 'true');
+            void closeBusinessOffer(offerId, identity.email)
+                .then((res) => {
+                    toast(res.message || 'Oferta cerrada.');
+                    void loadBusinessPanelData();
+                    void loadPlaces();
+                })
+                .catch((err) => {
+                    toast((err as Error).message || 'No se pudo cerrar la oferta.');
+                })
+                .finally(() => {
+                    target.removeAttribute('disabled');
+                });
             break;
+        }
         case 'radius':
             state.radius = Number(target.dataset.radius) || state.radius;
             syncRadiusCircle();

@@ -511,6 +511,9 @@ a { color: var(--fx-saffron); -webkit-tap-highlight-color: transparent; }
 .fx-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .fx-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     padding: 7px 13px;
     border-radius: 999px;
     border: 1px solid var(--fx-border);

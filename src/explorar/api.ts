@@ -3,6 +3,7 @@
  * impacto y panel de negocio (/api/places) de Foodlink.
  */
 import type { LatLng } from './geo.ts';
+import { getStoredUser } from '../utils/auth.ts';
 
 export type PlaceType = 'restaurante' | 'fonda' | 'panaderia' | 'cafeteria' | 'puesto' | 'mercado' | 'comedor' | 'otro';
 export type OfferFilter = 'all' | 'free' | 'discount' | 'surprise';
@@ -143,13 +144,33 @@ export interface AvailableBusinessItem {
     is_owner: boolean;
 }
 
+export interface BusinessPanelOrders {
+    pending: Order[];
+    history: Order[];
+}
+
 export interface BusinessPanelResponse {
     success: boolean;
     business: Place | null;
     available_businesses: AvailableBusinessItem[];
     offers: Offer[];
-    orders: Order[];
+    orders: BusinessPanelOrders | Order[];
     stats: BusinessStats | null;
+}
+
+export function splitBusinessPanelOrders(
+    orders: BusinessPanelResponse['orders'] | undefined | null
+): BusinessPanelOrders {
+    if (Array.isArray(orders)) {
+        return {
+            pending: orders.filter((o) => o.status === 'reserved'),
+            history: orders.filter((o) => o.status === 'picked_up' || o.status === 'cancelled')
+        };
+    }
+    return {
+        pending: Array.isArray(orders?.pending) ? orders.pending : [],
+        history: Array.isArray(orders?.history) ? orders.history : []
+    };
 }
 
 export const PLACE_TYPE_LABEL: Record<PlaceType, string> = {
@@ -366,9 +387,12 @@ export async function publishBusinessOffer(params: {
     return data;
 }
 
-export async function closeBusinessOffer(offerId: number): Promise<{ message: string }> {
+export async function closeBusinessOffer(offerId: number, email?: string): Promise<{ message: string }> {
+    const resolvedEmail = (email ?? getStoredUser()?.email ?? '').trim().toLowerCase();
     const response = await fetch(`/api/places/business/offers/${offerId}/close`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: resolvedEmail })
     });
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.success) {

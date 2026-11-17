@@ -67,7 +67,7 @@ export class Modals {
                         </div>
 
                         <div class="pt-2 flex items-center justify-between gap-3">
-                            <a href="/explorar/?tab=negocio" class="font-mono text-[11px] uppercase tracking-wider text-saffron hover:underline">
+                            <a href="/perfil/?tab=negocio" class="font-mono text-[11px] uppercase tracking-wider text-saffron hover:underline">
                                 ABRIR PANEL DE NEGOCIO
                             </a>
                             <div class="flex items-center gap-3">

@@ -254,3 +254,63 @@ Organizar la lógica Three.js en clases y módulos tipados con responsabilidades
   - El modo de inspección 3D y los modales continúan funcionando con total fluidez.
 - [ ] Cero emojis encontrados en todo el repositorio (`src/`, `index.html`, etc.).
 - [ ] `npm run build` (`tsc && vite build`) se ejecuta exitosamente con código de salida 0 sin errores de compilación ni excepciones de tipos.
+
+## 2026-11-15T13:03:49Z
+
+Elevate the Foodlink web Profile section (`/perfil/`) to production quality by redesigning it to match Foodlink's editorial glassmorphism visual language and fixing every broken user, QR, favorites, and business-management workflow end-to-end.
+
+Working directory: /home/pato/footlink
+Integrity mode: development
+
+## Requirements
+
+### R1. Production Visual Design & Responsive UX
+Redesign `/perfil/` so it matches Foodlink's editorial luxury and glassmorphism identity rather than looking plain:
+- Unify typography (self-hosted local display, UI, and monospace fonts used across Foodlink, removing mismatched external font loads), atmospheric depth, translucent surfaces, subtle luminous borders, and smooth transitions/loading skeletons.
+- Upgrade navigation to feel cohesive with Foodlink's floating capsule top bar, with compact sticky section navigation on mobile so the active tab content appears above the fold without scrolling past a tall user summary card.
+- Give each sub-section rich, purposeful visual hierarchy:
+  - **User summary & Account**: avatar with level ring, real verification badge/prompt, level progress indicator, active zone summary, interactive dietary tags, and a real favorite-alerts toggle.
+  - **Orders & QR**: culinary boarding-pass style cards with high-contrast scannable QR card, enlarge-QR modal, copy-code button, and live pickup countdowns.
+  - **Impact**: visual level progress gauge/ring, tangible equivalence metrics (food rescued, CO₂ avoided, water saved, money saved), and individual badge progress.
+  - **Favorites**: prominent active-offer alerts banner and live offer badges per place.
+  - **My Business**: clear separation between daily operations (QR redemption, active offers, pending & historical orders) and offer publishing / business onboarding, including live discount-percentage preview.
+
+### R2. Account, Preferences, Verification & Safe State Synchronization
+- Keep authentication and profile inspection consistent between development and production API servers, synchronize session changes across browser tabs, and remove unreachable legacy guest/inline-login dead code.
+- Surface the user's real email-verification state and provide an inline flow to enter or resend the verification code when unverified.
+- Persist all profile preferences—account name, pickup alias (kept distinct from account name unless explicitly changed), user role, zone note, dietary tags, and favorite-notification preference—across both database and in-memory fallback backends as well as client state, reporting actual errors if saving fails instead of showing false success.
+- Ensure background polling, window focus/visibility refreshes, and dietary tag clicks never overwrite unsaved form inputs or wipe edits in progress, and render loading skeletons on initial fetch instead of flashing false empty states.
+
+### R3. QR Integrity, Orders Lifecycle, Favorites & Cross-Page Navigation
+- Fix pickup QR generation so complete Foodlink pickup payloads (such as `FOODLINK:FL-XXXXXX` and longer valid strings) encode and decode cleanly with zero trailing-character truncation or code collisions.
+- Complete the Orders workflow: status filters (Active/Reserved, Picked Up, Cancelled), live countdown updates, full pickup window and establishment address/phone, one-click code copy, high-contrast enlarge-QR modal, reservation cancellation for active orders, and post-pickup rating/review submission.
+- Load and display **all** favorited establishments and their active rescue alerts regardless of distance from the user's current center (consistently across both SQL and in-memory backend paths), render active favorite alerts prominently, and ensure cross-page links work seamlessly (opening a place from Profile in `/explorar/` must focus that business, and business-panel links elsewhere in the app must route straight to `/perfil/`'s business tab).
+
+### R4. Strict Business Ownership, Geocoding & Operations ("Mi Negocio")
+- Restrict "Mi Negocio" strictly to establishments owned by the logged-in user: do not expose third-party or shared demo businesses, orders, or pickup codes; when a user owns no business yet, present a clear guided onboarding experience to register their first establishment.
+- Enforce authorization and business matching on the backend (both SQL and in-memory fallback): only a business's owner may create or close its offers, and QR order redemption must verify that the pickup code belongs to the selected business (returning a clear error if it belongs to another establishment).
+- Resolve real geographic coordinates from the business address (with optional current-location capture) during registration instead of saving hardcoded fallback coordinates.
+- Support optional offer descriptions, custom or preset pickup windows, pricing/stock validation (`price <= original_price`), proper error handling on offer closure, and both pending pickups and completed/cancelled order history.
+
+## Acceptance Criteria
+
+### Visual Design & Responsive Layout
+- [ ] `/perfil/` loads zero external Google Fonts requests and uses the same self-hosted local font families and Foodlink color/glassmorphism system as the rest of the web app.
+- [ ] All 5 tabs render cleanly with zero horizontal overflow, overlapping elements, broken assets, or console/page errors on both desktop (`1280×800`) and mobile (`390×844`) viewports, and active tab content on mobile is reachable immediately via sticky/compact navigation.
+- [ ] Initial loading renders skeleton states instead of flashing false empty states (`"No tienes reservas"` / `0 kg`).
+
+### Core User, QR, Orders & Favorites Behavior
+- [ ] Automated QR verification confirms distinct pickup payloads (including 18+ byte `FOODLINK:FL-XXXXXX` strings) produce distinct QR matrices and decode back to the exact un-truncated payload.
+- [ ] Automated and live checks confirm all preferences (`pickup_alias`, `role`, `zone_note`, `dietary_tags`, `notify_favorites`) persist across page reloads via backend endpoints (both SQL and in-memory fallback) without overwriting account `name` or clobbering dirty forms during background refreshes.
+- [ ] Verification badge and inline verification/resend flow reflect real `is_verified` status consistently in both dev and production server modes.
+- [ ] Orders tab supports filtering by status, live countdowns, cancelling a reserved order, enlarging/copying the QR, and submitting a review on a picked-up order.
+- [ ] Favorites beyond 10 km remain visible in Favorites alongside active rescue alerts, and navigating to `/explorar/` from a favorite/order selects that target business.
+
+### Business Panel Security & Operations
+- [ ] Unrelated users cannot view demo or other owners' businesses/orders in "Mi Negocio", cannot create or close offers on businesses they do not own, and cannot redeem a pickup code belonging to a different business.
+- [ ] Registering a business resolves coordinates from its address rather than a static fallback, and publishing an offer validates prices, handles closure errors, and shows both active pickups and completed/cancelled order history.
+
+### Verification & Build Checks
+- [ ] TypeScript type-checking (`tsc --noEmit`) and production build (`npm run build`) pass with zero errors.
+- [ ] Automated unit/API test suite passes covering QR encoding/decoding, favorites >10 km, preferences persistence, auth endpoint parity, and business ownership/redemption authorization (including in-memory fallback mode when MySQL is unavailable).
+- [ ] Real headless browser end-to-end verification exercises all 5 tabs, interactive modals/forms, and responsive layouts on desktop and mobile with zero runtime errors.
